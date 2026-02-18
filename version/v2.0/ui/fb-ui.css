@@ -292,6 +292,23 @@ body.native .window-bar label{
   font-size:12px;
   color: var(--muted);
 }
+.save-ind{
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.08);
+  opacity:0;
+  transform: scale(.85);
+  transition: opacity .12s ease, transform .12s ease, background-color .12s ease, border-color .12s ease;
+}
+.save-ind.is-on{
+  opacity:.95;
+  transform: scale(1);
+  border-color: rgb(var(--accent-rgb) / .55);
+  background: rgb(var(--accent-rgb) / .85);
+  box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / .12);
+}
 .badge{
   display:inline-flex; align-items:center; gap:6px;
   padding:2px 8px;

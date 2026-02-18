@@ -21,6 +21,7 @@
           <div class="bar-actions" aria-label="阅读器工具栏">
             <span class="pill" id="progressPill" title="按书保存/恢复进度（scrollRatio）">
               进度 <span class="kbd" id="progressText">—</span>
+              <span class="save-ind" id="saveInd" aria-hidden="true" title="已自动保存"></span>
             </span>
             <span class="pill" title="原型模拟：拖拽标题栏空白区域移动；拖拽右下角缩放">可拖拽/缩放</span>
             <button class="btn" type="button" id="btnTop" title="回到顶部（可选能力）">回到顶部</button>
@@ -307,6 +308,7 @@
       const reader = FB.qs("#reader");
       const progressText = FB.qs("#progressText");
       const progressPill = FB.qs("#progressPill");
+      const saveInd = FB.qs("#saveInd");
       const errDetail = FB.qs("#errDetail");
       const pathPreview = FB.qs("#pathPreview");
       const btnAppearance = FB.qs("#btnAppearance");
@@ -318,6 +320,7 @@
       let activeBook = null;
       let saveTimer = null;
       let lastSaveAt = 0;
+      let saveIndTimer = null;
 
       function escapeHTML(s){
         return String(s).replace(/[&<>"']/g, (c)=>({
@@ -406,6 +409,13 @@
         progressPill.title = `按书保存/恢复进度（scrollRatio=${r.toFixed(3)}）`;
       }
 
+      function flashSaved(){
+        if(!saveInd) return;
+        saveInd.classList.add("is-on");
+        clearTimeout(saveIndTimer);
+        saveIndTimer = setTimeout(()=> saveInd.classList.remove("is-on"), 900);
+      }
+
       function restoreProgress(){
         if(!activeBook || !reader) return;
         const prog = FB.data.getProgress(libraryId);
@@ -414,7 +424,7 @@
         requestAnimationFrame(()=>{
           scrollToRatio(reader, r);
           updateProgressPill(ratioFromScroll(reader));
-          if(r > 0) FB.toast("已恢复上次进度", `约 ${Math.round(r*100)}%`);
+          if(r > 0) flashSaved();
         });
       }
 
@@ -429,7 +439,7 @@
           lastSaveAt = now;
           const r = ratioFromScroll(reader);
           FB.data.updateProgress(libraryId, activeBook.id, r);
-          FB.toast("已自动保存进度", `${Math.round(r*100)}%`);
+          flashSaved();
         }, 320); // 合并短时间滚动
       }
 
