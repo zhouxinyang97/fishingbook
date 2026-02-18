@@ -720,6 +720,10 @@ body.native .window-bar label{
   line-height: 1.7;
   color: rgba(233,238,252,.92);
 }
+.reader.is-plain{
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .reader h1,.reader h2{
   font-family: var(--sans);
   letter-spacing:.2px;

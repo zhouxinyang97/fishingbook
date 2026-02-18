@@ -318,9 +318,12 @@
       const btnAppearanceDone = FB.qs("#btnAppearanceDone");
 
       let activeBook = null;
+      let activeTextContent = null;
+      let activeEncoding = null;
       let saveTimer = null;
       let lastSaveAt = 0;
       let saveIndTimer = null;
+      const isNative = !!(window.electronAPI && typeof window.electronAPI.readerOpenBook === "function");
 
       function escapeHTML(s){
         return String(s).replace(/[&<>"']/g, (c)=>({
@@ -328,7 +331,7 @@
         }[c]));
       }
 
-      function loadBook(){
+      async function loadBook(){
         if(!libraryId){
           bookTitle.textContent = "未选择书库";
           return;
@@ -336,30 +339,46 @@
         FB.data.setActiveLibrary(libraryId);
         const doc = FB.data.getBooks(libraryId);
         activeBook = bookId ? (doc.books.find(b=>b.id===bookId) || null) : null;
+        activeTextContent = null;
+        activeEncoding = null;
 
         const backHref = `./bookshelf.html?libraryId=${encodeURIComponent(libraryId)}`;
         btnBack.href = backHref;
         if(btnBack2) btnBack2.href = backHref;
         if(btnBackEmpty) btnBackEmpty.href = backHref;
 
-        if(!activeBook){
+        if(!bookId){
           bookTitle.textContent = "未选择书本";
           bookSub.textContent = "v2.0 · 阅读器 · 请从书架打开";
           pathPreview.textContent = "—";
-          // 若用户指定了 bookId 但找不到记录，进入错误态（更贴近“文件缺失/记录缺失”异常路径）
-          if(bookId && state !== "empty"){
-            FB.setParam("state", "error");
-            FB.setParam("err", "missing");
-            FB.applyState();
-            errDetail.textContent = "未找到书本记录（演示）";
-          }
           return;
         }
 
-        bookTitle.textContent = activeBook.displayTitle;
-        bookSub.textContent = `v2.0 · 阅读器 · ${activeBook.filePath}`;
-        pathPreview.textContent = activeBook.filePath;
-        if(activeBook.missing){
+        if(isNative){
+          const res = await window.electronAPI.readerOpenBook(libraryId, bookId);
+          if(!res || !res.success){
+            FB.setParam("state", "error");
+            FB.setParam("err", res?.error === "file-missing" ? "missing" : "read");
+            FB.applyState();
+            errDetail.textContent = res?.error === "file-missing"
+              ? "文件缺失：路径无效"
+              : `无法打开：${res?.error || "未知错误"}`;
+            return;
+          }
+          activeTextContent = res.content || "";
+          activeEncoding = res.encoding || null;
+          activeBook = activeBook || { id: bookId, displayTitle: res.fileName || "未命名", filePath: res.filePath || "" };
+          activeBook.filePath = res.filePath || activeBook.filePath;
+          if(res.fileName && !activeBook.displayTitle) activeBook.displayTitle = res.fileName;
+        }
+
+        const displayTitle = activeBook?.displayTitle || "未命名";
+        const fp = activeBook?.filePath || "";
+        bookTitle.textContent = displayTitle;
+        bookSub.textContent = `v2.0 · 阅读器 · ${fp}${activeEncoding ? ` · ${activeEncoding}` : ""}`;
+        pathPreview.textContent = fp || "—";
+
+        if(activeBook?.missing){
           FB.setParam("state", "error");
           FB.setParam("err", "missing");
           FB.applyState();
@@ -369,6 +388,13 @@
 
       function renderContent(){
         if(!reader || !activeBook) return;
+        reader.classList.remove("is-plain");
+        if(isNative && activeTextContent != null){
+          reader.classList.add("is-plain");
+          reader.textContent = activeTextContent;
+          return;
+        }
+
         const name = activeBook.displayTitle;
         const lines = [];
         lines.push(`<h1>${escapeHTML(name)}</h1>`);
@@ -416,10 +442,20 @@
         saveIndTimer = setTimeout(()=> saveInd.classList.remove("is-on"), 900);
       }
 
-      function restoreProgress(){
+      async function restoreProgress(){
         if(!activeBook || !reader) return;
-        const prog = FB.data.getProgress(libraryId);
-        const r = prog.progressByBookId?.[activeBook.id]?.scrollRatio ?? 0;
+        let r = 0;
+        if(isNative && typeof window.electronAPI?.progressGet === "function"){
+          try{
+            const pr = await window.electronAPI.progressGet(libraryId, activeBook.id);
+            r = pr?.success ? (pr.progress?.scrollRatio ?? 0) : 0;
+          }catch(_e){
+            r = 0;
+          }
+        }else{
+          const prog = FB.data.getProgress(libraryId);
+          r = prog.progressByBookId?.[activeBook.id]?.scrollRatio ?? 0;
+        }
         // 下一帧保证 scrollHeight 就绪
         requestAnimationFrame(()=>{
           scrollToRatio(reader, r);
@@ -438,7 +474,11 @@
           if(now - lastSaveAt < 2000) return; // ≤ 1 次/2 秒
           lastSaveAt = now;
           const r = ratioFromScroll(reader);
-          FB.data.updateProgress(libraryId, activeBook.id, r);
+          if(isNative && typeof window.electronAPI?.progressSave === "function"){
+            try{ window.electronAPI.progressSave(libraryId, activeBook.id, r); }catch(_e){}
+          }else{
+            FB.data.updateProgress(libraryId, activeBook.id, r);
+          }
           flashSaved();
         }, 320); // 合并短时间滚动
       }
@@ -490,7 +530,26 @@
       reader?.addEventListener("scroll", onScroll, { passive:true });
 
       // init
-      loadBook();
+      (async ()=>{
+        await loadBook();
+        if(state === "default"){
+          if(!activeBook){
+            FB.setParam("state", "empty");
+            FB.applyState();
+          }else{
+            renderContent();
+            await restoreProgress();
+            updateProgressPill(0);
+          }
+        }
+        if(state === "loading"){
+          setTimeout(()=>{
+            if(FB.parseParams().get("state") === "loading"){
+              location.href = `./reader.html?libraryId=${encodeURIComponent(libraryId)}&bookId=${encodeURIComponent(bookId)}`;
+            }
+          }, 900);
+        }
+      })();
 
       // appearance (global)
       function syncAppearanceUI(){
@@ -545,24 +604,10 @@
           : "未知错误（演示）";
       }
       if(state === "default"){
-        if(!activeBook){
-          // 未选择书本：进入空态（满足“空/加载/错误态”覆盖）
-          FB.setParam("state", "empty");
-          FB.applyState();
-        }else{
-        renderContent();
-        restoreProgress();
-        // 提供初始 pill
-        updateProgressPill(0);
-        }
+        // init IIFE handles default rendering
       }
       if(state === "loading"){
-        // 模拟加载完成后进入默认态（便于演示）
-        setTimeout(()=>{
-          if(FB.parseParams().get("state") === "loading"){
-            location.href = `./reader.html?libraryId=${encodeURIComponent(libraryId)}&bookId=${encodeURIComponent(bookId)}`;
-          }
-        }, 900);
+        // init IIFE handles loading transition
       }
     </script>
   </body>
