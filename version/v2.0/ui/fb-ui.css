@@ -87,6 +87,45 @@ a:hover{ text-decoration:underline; }
   position:relative;
 }
 
+.native body,
+body.native{
+  background: transparent;
+}
+body.native:before{
+  display:none;
+}
+body.native .app{
+  padding:0;
+  align-items:stretch;
+  justify-content:stretch;
+  height:100%;
+}
+body.native .window{
+  width:100%;
+  height:100%;
+  border-radius:0;
+  box-shadow:none;
+  border:0;
+  display:flex;
+  flex-direction:column;
+}
+body.native .content{
+  flex:1;
+  overflow:auto;
+  -webkit-overflow-scrolling: touch;
+}
+body.native .window-bar{
+  -webkit-app-region: drag;
+}
+body.native .window-bar button,
+body.native .window-bar a,
+body.native .window-bar input,
+body.native .window-bar select,
+body.native .window-bar textarea,
+body.native .window-bar label{
+  -webkit-app-region: no-drag;
+}
+
 .window-bar{
   display:flex;
   align-items:center;
@@ -534,6 +573,21 @@ a:hover{ text-decoration:underline; }
   align-items:center;
   gap:10px;
 }
+
+/* Native resize handles (Electron frameless window) */
+.native-resizer{
+  position: fixed;
+  z-index: 9999;
+  background: transparent;
+}
+.native-resizer.tl{ top:0; left:0; width:14px; height:14px; cursor:nwse-resize; }
+.native-resizer.tr{ top:0; right:0; width:14px; height:14px; cursor:nesw-resize; }
+.native-resizer.bl{ bottom:0; left:0; width:14px; height:14px; cursor:nesw-resize; }
+.native-resizer.br{ bottom:0; right:0; width:14px; height:14px; cursor:nwse-resize; }
+.native-resizer.t{ top:0; left:14px; right:14px; height:6px; cursor:ns-resize; }
+.native-resizer.b{ bottom:0; left:14px; right:14px; height:6px; cursor:ns-resize; }
+.native-resizer.l{ left:0; top:14px; bottom:14px; width:6px; cursor:ew-resize; }
+.native-resizer.r{ right:0; top:14px; bottom:14px; width:6px; cursor:ew-resize; }
 .resize-overlay-meta{
   font-family: var(--mono);
   font-size:12px;

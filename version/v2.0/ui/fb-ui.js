@@ -13,6 +13,10 @@
   const clamp01 = (n) => Math.max(0, Math.min(1, n));
   const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
+  function isElectron(){
+    return !!(window.electronAPI && typeof window.electronAPI === "object");
+  }
+
   function formatTime(ts){
     try{
       const d = new Date(ts);
@@ -238,6 +242,134 @@
         }
       });
       ro.observe(win);
+    });
+  }
+
+  function initNativeMode(){
+    if(!isElectron()) return;
+    document.body.classList.add("native");
+    document.documentElement.classList.add("native");
+    qsa(".window.sim-window").forEach(win=>{
+      win.classList.remove("sim-window");
+      win.style.left = "";
+      win.style.top = "";
+      win.style.transform = "";
+    });
+  }
+
+  function initNativeResize(){
+    if(!isElectron()) return;
+    if(typeof window.electronAPI.resizeWindow !== "function") return;
+    if(qs(".native-resizer")) return;
+
+    const parts = ["tl","t","tr","r","br","b","bl","l"];
+    parts.forEach(p=>{
+      const el = document.createElement("div");
+      el.className = `native-resizer ${p}`;
+      el.setAttribute("data-native-resizer", p);
+      document.body.appendChild(el);
+    });
+
+    let isResizing = false;
+    let dir = null;
+    let startX = 0, startY = 0;
+    let startW = 0, startH = 0;
+    let startLeft = 0, startTop = 0;
+    let pending = null;
+    let raf = null;
+    let lastSent = null;
+    let lastSentAt = 0;
+
+    function boundsEqual(a,b){
+      if(!a || !b) return false;
+      return a.x===b.x && a.y===b.y && a.width===b.width && a.height===b.height;
+    }
+
+    function tick(){
+      raf = null;
+      if(!isResizing) return;
+      if(pending){
+        const now = performance.now();
+        if(now - lastSentAt >= 33 && !boundsEqual(pending, lastSent)){
+          window.electronAPI.resizeWindow(pending);
+          lastSent = pending;
+          lastSentAt = now;
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    }
+
+    function schedule(){
+      if(raf != null) return;
+      raf = requestAnimationFrame(tick);
+    }
+
+    function onMove(e){
+      if(!isResizing) return;
+      const dx = e.screenX - startX;
+      const dy = e.screenY - startY;
+      let newW = startW;
+      let newH = startH;
+      let newX = startLeft;
+      let newY = startTop;
+
+      const minW = 360;
+      const minH = 240;
+
+      if(dir === "r"){ newW = startW + dx; }
+      else if(dir === "l"){ newW = startW - dx; newX = startLeft + dx; }
+      else if(dir === "b"){ newH = startH + dy; }
+      else if(dir === "t"){ newH = startH - dy; newY = startTop + dy; }
+      else if(dir === "br"){ newW = startW + dx; newH = startH + dy; }
+      else if(dir === "bl"){ newW = startW - dx; newH = startH + dy; newX = startLeft + dx; }
+      else if(dir === "tr"){ newW = startW + dx; newH = startH - dy; newY = startTop + dy; }
+      else if(dir === "tl"){ newW = startW - dx; newH = startH - dy; newX = startLeft + dx; newY = startTop + dy; }
+
+      if(newW < minW){
+        if(dir === "l" || dir === "bl" || dir === "tl") newX -= (minW - newW);
+        newW = minW;
+      }
+      if(newH < minH){
+        if(dir === "t" || dir === "tr" || dir === "tl") newY -= (minH - newH);
+        newH = minH;
+      }
+
+      pending = { x: Math.round(newX), y: Math.round(newY), width: Math.round(newW), height: Math.round(newH) };
+      schedule();
+      document.body.classList.add("is-resizing");
+    }
+
+    function onUp(){
+      if(!isResizing) return;
+      isResizing = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      if(pending && !boundsEqual(pending, lastSent)) window.electronAPI.resizeWindow(pending);
+      pending = null;
+      document.body.classList.remove("is-resizing");
+      if(raf != null){
+        cancelAnimationFrame(raf);
+        raf = null;
+      }
+    }
+
+    qsa("[data-native-resizer]").forEach(el=>{
+      el.addEventListener("mousedown", (e)=>{
+        if(e.button !== 0) return;
+        isResizing = true;
+        dir = el.getAttribute("data-native-resizer");
+        startX = e.screenX; startY = e.screenY;
+        startW = window.outerWidth;
+        startH = window.outerHeight;
+        startLeft = window.screenX;
+        startTop = window.screenY;
+        lastSent = null;
+        lastSentAt = 0;
+        pending = null;
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+        e.preventDefault();
+      });
     });
   }
 
@@ -494,11 +626,13 @@
   // ---------- base init ----------
   function initBase(){
     seed();
+    initNativeMode();
     initAppearance();
     wireModals();
     applyState();
     initDebug();
-    initSimWindow();
+    if(!isElectron()) initSimWindow();
+    initNativeResize();
   }
 
   // Expose
