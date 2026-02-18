@@ -209,59 +209,113 @@
         <div class="modal-hd">
           <div>
             <div class="modal-title">导入书本</div>
-            <div class="card-desc" style="margin-top:6px;">（原型模拟文件选择器：默认“引用原路径”）</div>
+            <div class="card-desc" style="margin-top:6px;">
+              将打开系统文件选择器，可多选 <span class="kbd">.txt</span> / <span class="kbd">.log</span> / <span class="kbd">.md</span>。导入将以原路径引用（不复制文件）。
+            </div>
           </div>
           <button class="btn btn-ghost" type="button" data-modal-close="mImport" aria-label="关闭">✕</button>
         </div>
         <div class="modal-bd">
-          <div class="list" aria-label="可导入文件">
-            <div class="item">
-              <div class="item-main">
-                <div class="item-title">银河系漫游指南.md</div>
-                <div class="item-sub">D:\Books\Misc\银河系漫游指南.md</div>
-              </div>
-              <div class="item-actions">
-                <label class="pill" style="cursor:pointer;">
-                  <input type="checkbox" data-import-item checked
-                    data-title="银河系漫游指南"
-                    data-path="D:\\Books\\Misc\\银河系漫游指南.md" />
-                  选择
-                </label>
-              </div>
+          <div class="row" style="align-items:flex-start;">
+            <div style="flex:1; min-width:0;">
+              <div class="card-title" style="font-size:13px;">选择方式</div>
+              <div class="card-desc" id="importModeHint">检测中…</div>
             </div>
-            <div class="item">
-              <div class="item-main">
-                <div class="item-title">项目复盘.log</div>
-                <div class="item-sub">D:\Docs\Logs\项目复盘.log</div>
-              </div>
-              <div class="item-actions">
-                <label class="pill" style="cursor:pointer;">
-                  <input type="checkbox" data-import-item
-                    data-title="项目复盘"
-                    data-path="D:\\Docs\\Logs\\项目复盘.log" />
-                  选择
-                </label>
-              </div>
+            <span class="badge" id="importModeBadge">—</span>
+          </div>
+
+          <div class="sep"></div>
+
+          <!-- Native picker (Electron) -->
+          <div class="state" id="importNativeView" data-import-view="native">
+            <div class="muted" style="font-size:12.5px; line-height:1.65;">
+              点击下方“选择文件…”将打开系统文件选择器。选择完成后会在此处展示导入结果（新增 / 跳过重复 / 失败）。
             </div>
-            <div class="item">
-              <div class="item-main">
-                <div class="item-title">射雕英雄传.txt（重复导入示例）</div>
-                <div class="item-sub">D:\Books\Novels\射雕英雄传.txt</div>
+            <div class="sep"></div>
+            <div class="muted" style="font-size:12.5px; line-height:1.65;">
+              Electron 调用：<span class="kbd">window.electronAPI.bookImportFiles(libraryId)</span>
+            </div>
+          </div>
+
+          <!-- Fallback demo picker (non-Electron) -->
+          <div class="state" id="importFallbackView" data-import-view="fallback">
+            <div class="card-desc" style="margin-bottom:10px;">
+              非 Electron 环境：使用演示列表模拟“文件选择器”（用于原型展示与联调前占位）。
+            </div>
+            <div class="list" aria-label="演示：可导入文件">
+              <div class="item">
+                <div class="item-main">
+                  <div class="item-title">银河系漫游指南.md</div>
+                  <div class="item-sub">D:\Books\Misc\银河系漫游指南.md</div>
+                </div>
+                <div class="item-actions">
+                  <label class="pill" style="cursor:pointer;">
+                    <input type="checkbox" data-import-item checked
+                      data-title="银河系漫游指南"
+                      data-path="D:\\Books\\Misc\\银河系漫游指南.md" />
+                    选择
+                  </label>
+                </div>
               </div>
-              <div class="item-actions">
-                <label class="pill" style="cursor:pointer;">
-                  <input type="checkbox" data-import-item
-                    data-title="射雕英雄传"
-                    data-path="D:\\Books\\Novels\\射雕英雄传.txt" />
-                  选择
-                </label>
+              <div class="item">
+                <div class="item-main">
+                  <div class="item-title">项目复盘.log</div>
+                  <div class="item-sub">D:\Docs\Logs\项目复盘.log</div>
+                </div>
+                <div class="item-actions">
+                  <label class="pill" style="cursor:pointer;">
+                    <input type="checkbox" data-import-item
+                      data-title="项目复盘"
+                      data-path="D:\\Docs\\Logs\\项目复盘.log" />
+                    选择
+                  </label>
+                </div>
+              </div>
+              <div class="item">
+                <div class="item-main">
+                  <div class="item-title">射雕英雄传.txt（重复导入示例）</div>
+                  <div class="item-sub">D:\Books\Novels\射雕英雄传.txt</div>
+                </div>
+                <div class="item-actions">
+                  <label class="pill" style="cursor:pointer;">
+                    <input type="checkbox" data-import-item
+                      data-title="射雕英雄传"
+                      data-path="D:\\Books\\Novels\\射雕英雄传.txt" />
+                    选择
+                  </label>
+                </div>
+              </div>
+              <div class="item">
+                <div class="item-main">
+                  <div class="item-title">受限目录.md（失败示例）</div>
+                  <div class="item-sub">C:\Windows\System32\受限目录.md</div>
+                </div>
+                <div class="item-actions">
+                  <label class="pill" style="cursor:pointer;">
+                    <input type="checkbox" data-import-item
+                      data-sim-fail="1"
+                      data-title="受限目录"
+                      data-path="C:\\Windows\\System32\\受限目录.md" />
+                    选择
+                  </label>
+                </div>
               </div>
             </div>
           </div>
+
+          <div class="sep"></div>
+
+          <div id="importResultWrap" aria-live="polite">
+            <div class="card-title" style="font-size:13px;">导入结果</div>
+            <div class="card-desc" id="importResultMeta">尚未导入。</div>
+            <div style="height:10px;"></div>
+            <div class="list" id="importResultList" aria-label="导入结果列表"></div>
+          </div>
         </div>
         <div class="modal-ft">
-          <button class="btn" type="button" data-modal-close="mImport">取消</button>
-          <button class="btn btn-primary" type="button" id="btnDoImport">导入</button>
+          <button class="btn" type="button" data-modal-close="mImport">关闭</button>
+          <button class="btn" type="button" id="btnDoFallbackImport">导入已选择</button>
+          <button class="btn btn-primary" type="button" id="btnPickFiles">选择文件…</button>
         </div>
       </div>
     </div>
@@ -380,9 +434,18 @@
       const libListModal = FB.qs("#libListModal");
       const autoOpen2 = FB.qs("#autoOpen2");
       const btnOpenAppearanceFromShelf = FB.qs("#btnOpenAppearanceFromShelf");
+      const importModeHint = FB.qs("#importModeHint");
+      const importModeBadge = FB.qs("#importModeBadge");
+      const importNativeView = FB.qs("#importNativeView");
+      const importFallbackView = FB.qs("#importFallbackView");
+      const btnPickFiles = FB.qs("#btnPickFiles");
+      const btnDoFallbackImport = FB.qs("#btnDoFallbackImport");
+      const importResultMeta = FB.qs("#importResultMeta");
+      const importResultList = FB.qs("#importResultList");
 
       let pendingBookId = null;
       let pendingBookTitle = null;
+      let importInFlight = false;
 
       function escapeHTML(s){
         return String(s).replace(/[&<>"']/g, (c)=>({
@@ -550,26 +613,155 @@
       });
 
       // import
-      FB.qs("#btnImport").addEventListener("click", ()=> FB.openModal("mImport"));
-      FB.qsa("[data-open-import]").forEach(b=> b.addEventListener("click", ()=> FB.openModal("mImport")));
-      FB.qs("#btnDoImport").addEventListener("click", ()=>{
-        const lib = getActiveLibrary();
-        if(!lib) return;
-        const checks = FB.qsa("[data-import-item]");
-        const files = checks.filter(c=>c.checked).map(c=>({
-          displayTitle: c.getAttribute("data-title"),
-          filePath: c.getAttribute("data-path"),
-          size: 400000,
-          mtimeMs: Date.now() - 1000*60*60*24*Math.floor(Math.random()*30)
-        }));
-        const { added, dup } = FB.data.importBooks(lib.id, files);
-        FB.closeModal("mImport");
-        if(added.length) FB.toast("导入成功", `新增 ${added.length} 本`);
-        if(dup.length) FB.toast("已存在", `跳过 ${dup.length} 本（去重）`);
+      function setImportView(mode){
+        const isNative = mode === "native";
+        importNativeView?.classList.toggle("is-active", isNative);
+        importFallbackView?.classList.toggle("is-active", !isNative);
+        btnPickFiles.style.display = isNative ? "" : "none";
+        btnDoFallbackImport.style.display = isNative ? "none" : "";
+      }
+
+      function clearImportResult(){
+        importResultMeta.textContent = "尚未导入。";
+        importResultList.innerHTML = "";
+      }
+
+      function renderImportResult(res){
+        const added = res?.added || [];
+        const dup = res?.dup || [];
+        const failed = res?.failed || [];
+        const total = added.length + dup.length + failed.length;
+
+        if(total === 0){
+          importResultMeta.textContent = "未选择文件或已取消。";
+          importResultList.innerHTML = "";
+          return;
+        }
+
+        importResultMeta.textContent = `新增 ${added.length} · 跳过重复 ${dup.length} · 失败 ${failed.length}`;
+
+        const rows = [];
+        added.forEach(x=> rows.push({ kind:"added", displayTitle: x.displayTitle, filePath: x.filePath }));
+        dup.forEach(x=> rows.push({ kind:"dup", displayTitle: x.displayTitle, filePath: x.filePath }));
+        failed.forEach(x=> rows.push({ kind:"failed", displayTitle: x.displayTitle, filePath: x.filePath, reason: x.reason }));
+
+        importResultList.innerHTML = "";
+        rows.forEach(r=>{
+          const item = document.createElement("div");
+          item.className = "item";
+          const badge = (r.kind === "added")
+            ? `<span class="badge ok">新增</span>`
+            : (r.kind === "dup")
+              ? `<span class="badge warn">跳过</span>`
+              : `<span class="badge bad">失败</span>`;
+          const sub = (r.kind === "failed" && (!r.filePath))
+            ? (r.reason || "导入失败")
+            : (r.filePath || r.reason || "—");
+          item.innerHTML = `
+            <div class="item-main">
+              <div class="item-title">${escapeHTML(r.displayTitle || "未命名")}</div>
+              <div class="item-sub">${escapeHTML(sub)}</div>
+            </div>
+            <div class="item-actions">${badge}</div>
+          `;
+          importResultList.appendChild(item);
+        });
+
+        if(added.length) FB.toast("导入完成", `新增 ${added.length} 本`);
+        if(dup.length) FB.toast("去重跳过", `跳过 ${dup.length} 本`);
+        if(failed.length) FB.toast("存在失败", `失败 ${failed.length} 条`);
+
         FB.setParam("state", "default");
         FB.applyState();
         renderContinueCard();
         renderBooks();
+      }
+
+      function openImportModal({ autoPick=false } = {}){
+        const lib = getActiveLibrary();
+        if(!lib) return;
+
+        clearImportResult();
+
+        const canNativePick = !!(window.electronAPI && typeof window.electronAPI.bookImportFiles === "function");
+        if(canNativePick){
+          importModeHint.textContent = "检测到 Electron 环境：将调用系统文件选择器（支持多选）";
+          importModeBadge.textContent = "系统";
+          setImportView("native");
+        }else{
+          importModeHint.textContent = "未检测到 Electron：使用演示列表作为 fallback（不调用系统文件选择器）";
+          importModeBadge.textContent = "演示";
+          setImportView("fallback");
+        }
+
+        FB.openModal("mImport");
+
+        if(canNativePick && autoPick){
+          // small delay to avoid focus-stealing issues in some environments
+          setTimeout(()=> startNativePick(), 80);
+        }
+      }
+
+      async function startNativePick(){
+        const lib = getActiveLibrary();
+        if(!lib) return;
+        if(importInFlight) return;
+        if(typeof FB.nativeImportBooks !== "function"){
+          importResultMeta.textContent = "未实现 nativeImportBooks（原型运行时缺失）。";
+          return;
+        }
+
+        importInFlight = true;
+        btnPickFiles.disabled = true;
+        const oldText = btnPickFiles.textContent;
+        btnPickFiles.textContent = "等待选择…";
+        importResultMeta.textContent = "正在打开系统文件选择器…";
+
+        const res = await FB.nativeImportBooks(lib.id);
+
+        btnPickFiles.disabled = false;
+        btnPickFiles.textContent = oldText === "选择文件…" ? "再次选择…" : oldText;
+        importInFlight = false;
+
+        if(res === null){
+          importResultMeta.textContent = "当前环境不支持系统文件选择器（fallback 仅用于展示）。";
+          return;
+        }
+        renderImportResult(res);
+      }
+
+      FB.qs("#btnImport").addEventListener("click", ()=> openImportModal({ autoPick:true }));
+      FB.qsa("[data-open-import]").forEach(b=> b.addEventListener("click", ()=> openImportModal({ autoPick:true })));
+      btnPickFiles.addEventListener("click", ()=> startNativePick());
+      btnDoFallbackImport.addEventListener("click", ()=>{
+        const lib = getActiveLibrary();
+        if(!lib) return;
+        const checks = FB.qsa("[data-import-item]");
+        const chosen = checks.filter(c=>c.checked);
+
+        const failed = chosen
+          .filter(c=>c.getAttribute("data-sim-fail") === "1")
+          .map(c=>({
+            displayTitle: c.getAttribute("data-title") || "未命名",
+            filePath: c.getAttribute("data-path") || "",
+            reason: "权限不足或文件被占用（演示）"
+          }));
+
+        const files = chosen
+          .filter(c=>c.getAttribute("data-sim-fail") !== "1")
+          .map(c=>({
+            displayTitle: c.getAttribute("data-title"),
+            filePath: c.getAttribute("data-path"),
+            size: 400000,
+            mtimeMs: Date.now() - 1000*60*60*24*Math.floor(Math.random()*30)
+          }));
+
+        const { added, dup } = FB.data.importBooks(lib.id, files);
+        renderImportResult({
+          added: added.map(b=>({ displayTitle:b.displayTitle, filePath:b.filePath })),
+          dup: dup.map(d=>({ displayTitle:d.displayTitle || d.title || "重复条目", filePath:d.filePath })),
+          failed,
+        });
       });
 
       // open/more actions

@@ -601,6 +601,121 @@
     return { added, dup };
   }
 
+  function getExtLower(filePath){
+    const s = String(filePath||"");
+    const m = s.match(/\.([a-z0-9]+)$/i);
+    return m ? `.${m[1].toLowerCase()}` : "";
+  }
+
+  function guessTitleFromPath(filePath){
+    const s = String(filePath||"");
+    const base = s.split(/[\\/]/).pop() || s || "未命名";
+    return base.replace(/\.[^.]+$/, "") || base || "未命名";
+  }
+
+  function normalizeImportItem(x){
+    const filePath = x?.filePath || x?.path || x?.fullPath || x?.file || "";
+    const displayTitle = x?.displayTitle || x?.title || x?.name || guessTitleFromPath(filePath);
+    const size = Number(x?.size) || 0;
+    const mtimeMs = Number(x?.mtimeMs || x?.mtime) || 0;
+    const reason = x?.reason || x?.error || x?.message || "";
+    return { displayTitle, filePath, size, mtimeMs, reason };
+  }
+
+  function normalizeImportResultShape(res){
+    // Return a normalized shape:
+    // { added:[{displayTitle,filePath}], dup:[{displayTitle,filePath}], failed:[{displayTitle,filePath,reason}] }
+    const out = { added:[], dup:[], failed:[] };
+    if(!res) return out;
+
+    // If main process already returns categories
+    if(res && typeof res === "object" && (Array.isArray(res.added) || Array.isArray(res.dup) || Array.isArray(res.failed))){
+      out.added = (res.added||[]).map(normalizeImportItem);
+      out.dup = (res.dup||[]).map(normalizeImportItem);
+      out.failed = (res.failed||[]).map(normalizeImportItem);
+      return out;
+    }
+
+    // If it returns per-file items with status
+    const items = Array.isArray(res)
+      ? res
+      : (Array.isArray(res.items) ? res.items
+        : (Array.isArray(res.files) ? res.files
+          : (Array.isArray(res.picked) ? res.picked : null)));
+    if(Array.isArray(items)){
+      items.forEach(it=>{
+        const n = normalizeImportItem(it);
+        const st = String(it?.status || it?.result || "").toLowerCase();
+        if(st === "added" || st === "new" || st === "imported") out.added.push(n);
+        else if(st === "dup" || st === "duplicate" || st === "skipped") out.dup.push(n);
+        else if(st === "failed" || st === "error") out.failed.push({ ...n, reason: n.reason || "导入失败" });
+        else out.added.push(n); // treat as picked files list (renderer will dedupe later)
+      });
+      return out;
+    }
+
+    return out;
+  }
+
+  async function nativeImportBooks(libId){
+    // Electron: call system file picker via preload API.
+    // Non-Electron: returns null so caller can fallback to demo picker.
+    if(!isElectron()) return null;
+    if(typeof window.electronAPI?.bookImportFiles !== "function") return null;
+
+    try{
+      const raw = await window.electronAPI.bookImportFiles(libId);
+      const normalized = normalizeImportResultShape(raw);
+
+      // If normalized already contains "failed/dup/added" buckets but "added" are still just picked files,
+      // run prototype-side dedupe+insert to keep bookshelf UI consistent.
+      const hasExplicitBuckets = raw && typeof raw === "object" && (Array.isArray(raw.added) || Array.isArray(raw.dup) || Array.isArray(raw.failed));
+      if(hasExplicitBuckets){
+        // Heuristic: if added items don't look like already-added books (no id/addedAt),
+        // treat them as picked file descriptors.
+        const looksLikeBook = (raw.added||[]).some(x=>x && (x.id || x.addedAt));
+        if(looksLikeBook){
+          // Main process already imported; keep shape but don't mutate prototype storage.
+          return {
+            added: normalized.added.map(x=>({ displayTitle:x.displayTitle, filePath:x.filePath })),
+            dup: normalized.dup.map(x=>({ displayTitle:x.displayTitle, filePath:x.filePath })),
+            failed: normalized.failed.map(x=>({ displayTitle:x.displayTitle, filePath:x.filePath, reason:x.reason || "导入失败" })),
+          };
+        }
+      }
+
+      // Otherwise treat (normalized.added) as picked files list.
+      const picked = normalized.added.map(x=>({
+        displayTitle: x.displayTitle,
+        filePath: x.filePath,
+        size: x.size,
+        mtimeMs: x.mtimeMs,
+      })).filter(x=>!!x.filePath);
+
+      const allowExt = new Set([".txt",".log",".md"]);
+      const okFiles = [];
+      const failed = normalized.failed.map(x=>({ displayTitle:x.displayTitle, filePath:x.filePath, reason: x.reason || "导入失败" }));
+      picked.forEach(f=>{
+        const ext = getExtLower(f.filePath);
+        if(ext && !allowExt.has(ext)){
+          failed.push({ displayTitle: f.displayTitle, filePath: f.filePath, reason: `不支持的格式：${ext}` });
+          return;
+        }
+        okFiles.push(f);
+      });
+
+      const { added, dup } = importBooks(libId, okFiles);
+      return {
+        added: added.map(b=>({ displayTitle:b.displayTitle, filePath:b.filePath })),
+        dup: dup.map(d=>({ displayTitle:d.displayTitle || guessTitleFromPath(d.filePath), filePath:d.filePath })),
+        failed,
+      };
+    }catch(e){
+      const msg = (e && (e.message || String(e))) || "未知错误";
+      return { added:[], dup:[], failed:[{ displayTitle:"导入失败", filePath:"", reason: msg }] };
+    }
+  }
+
   function relinkBook(libId, bookId, newPath){
     const doc = getBooks(libId);
     const b = doc.books.find(x=>x.id === bookId);
@@ -657,6 +772,8 @@
     getLibraries, setActiveLibrary, removeLibrary, setAutoOpen,
     getBooks, getProgress, updateProgress, importBooks, relinkBook, removeBook
   };
+
+  FB.nativeImportBooks = nativeImportBooks;
 
   FB.initBase = initBase;
   window.FB = FB;
