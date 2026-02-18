@@ -1,0 +1,33 @@
+# Node dependencies
+node_modules/
+
+# Build outputs
+dist/
+out/
+release/
+
+# Electron cache and binaries
+.cache/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Env / secrets (none expected, precaution)
+.env
+.env.local
+
+# Package manager artifacts
+package-lock.json
+pnpm-lock.yaml
+yarn.lock

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fishing Book - MVP Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
+
+        body {
+            /* Simulating a desktop background with VS Code behind it */
+            background-color: #0d1117; 
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        /* The App Window */
+        #app-window {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 600px;
+            /* Default VS Code Dark+ background with some opacity */
+            background-color: rgba(30, 30, 30, 0.95);
+            color: #d4d4d4;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            border: 1px solid #333;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.2s ease, opacity 0.2s ease;
+            border-radius: 6px;
+        }
+
+        /* Header mimicking VS Code tabs or terminal header */
+        .window-header {
+            height: 35px;
+            background-color: rgba(37, 37, 38, 0.8); /* Slightly different shade */
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(0,0,0,0.2);
+            cursor: move; /* Implies draggability */
+            justify-content: space-between;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+
+        .tab-active {
+            background-color: rgba(30, 30, 30, 0.5);
+            padding: 8px 12px;
+            border-top: 1px solid #007acc;
+            color: #ffffff;
+        }
+
+        /* Content Area */
+        #content-area {
+            flex: 1;
+            padding: 10px 20px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            /* Scrollbar styling */
+            scrollbar-width: thin;
+            scrollbar-color: #424242 transparent;
+        }
+
+        #content-area::-webkit-scrollbar {
+            width: 10px;
+        }
+        #content-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #content-area::-webkit-scrollbar-thumb {
+            background-color: #424242;
+            border-radius: 20px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+
+        /* Syntax Highlighting Simulation */
+        .log-time { color: #569cd6; }
+        .log-info { color: #4ec9b0; }
+        .log-text { color: #ce9178; }
+        .comment { color: #6a9955; }
+
+        /* Controls Overlay - Hidden by default, shown on hover of a specific area */
+        .controls-area {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            border-radius: 8px;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.3s;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #app-window:hover .controls-area {
+            opacity: 1;
+        }
+
+        /* Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100px;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: #007acc;
+            cursor: pointer;
+            margin-top: -5px; 
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #424242;
+            border-radius: 2px;
+        }
+
+        .btn {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: sans-serif;
+        }
+        .btn:hover { background: #0062a3; }
+        
+        .hidden-file-input {
+            display: none;
+        }
+
+    </style>
+    </head>
+    <body>
+
+        <!-- Instructions for the user reviewing the prototype -->
+        <div class="fixed top-4 left-4 text-gray-500 text-xs select-none pointer-events-none">
+            <p>Fishing Book MVP Prototype</p>
+            <p>Hover over the bottom-right of the window for controls.</p>
+        </div>
+
+        <!-- The "Fishing Book" Window -->
+        <div id="app-window">
+            <!-- Header / Title Bar -->
+            <div class="window-header">
+                <div class="flex items-center gap-2">
+                    <div class="tab-active flex items-center gap-2">
+                        <span class="text-blue-400">#</span>
+                        <span>app.log</span>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <div class="w-3 h-3 rounded-full bg-yellow-600 opacity-50"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-600 opacity-50"></div>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div id="content-area">
+    <span class="comment">// Application Startup Sequence initiated...</span>
+    <span class="log-time">[10:23:41]</span> <span class="log-info">INFO</span>  <span class="log-text">Loading core modules... done.</span>
+    <span class="log-time">[10:23:42]</span> <span class="log-info">INFO</span>  <span class="log-text">Connecting to database... success.</span>
+    <span class="comment">// --------------------------------------------------</span>
+    <span class="comment">// Chapter 1: The Beginning</span>
+    <span class="comment">// --------------------------------------------------</span>
+    <span class="log-time">[10:23:45]</span> <span class="log-info">DEBUG</span> <span class="log-text">It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind, slipped quickly through the glass doors of Victory Mansions, though not quickly enough to prevent a swirl of gritty dust from entering along with him.</span>
+
+    <span class="log-time">[10:23:46]</span> <span class="log-info">DEBUG</span> <span class="log-text">The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster, too large for indoor display, had been tacked to the wall. It depicted simply an enormous face, more than a metre wide: the face of a man of about forty-five, with a heavy black moustache and ruggedly handsome features.</span>
+
+    <span class="log-time">[10:23:48]</span> <span class="log-info">WARN</span>  <span class="log-text">Winston made for the stairs. It was no use trying the lift. Even at the best of times it was seldom working, and at present the electric current was cut off during daylight hours.</span>
+            </div>
+
+            <!-- Controls (Hidden until hover) -->
+            <div class="controls-area">
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs text-gray-400">Opacity</label>
+                    <input type="range" id="opacity-slider" min="10" max="100" value="95">
+                </div>
+                <div class="w-px h-8 bg-gray-600 mx-2"></div>
+                <button class="btn" onclick="document.getElementById('file-input').click()">Load File</button>
+                <input type="file" id="file-input" class="hidden-file-input" accept=".txt,.log,.md">
+            </div>
+        </div>
+
+        <script>
+            const appWindow = document.getElementById('app-window');
+            const contentArea = document.getElementById('content-area');
+            const opacitySlider = document.getElementById('opacity-slider');
+            const fileInput = document.getElementById('file-input');
+
+            // Transparency Control
+            opacitySlider.addEventListener('input', (e) => {
+                const val = e.target.value / 100;
+                // Update background rgba alpha channel
+                appWindow.style.backgroundColor = `rgba(30, 30, 30, ${val})`;
+            });
+
+            // File Load Simulation
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const text = event.target.result;
+                    // Convert plain text to "Log" format for the MVP
+                    const lines = text.split('\n');
+                    let html = '<span class="comment">// Loaded: ' + file.name + '</span><br>';
+                    html += '<span class="comment">// -----------------------------------</span><br><br>';
+                    
+                    lines.forEach((line, index) => {
+                        if (line.trim() === '') {
+                            html += '<br>';
+                            return;
+                        }
+                        // Simulate log structure
+                        const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+                        html += `<span class="log-time">[${time}]</span> <span class="log-info">DATA</span> <span class="log-text">${escapeHtml(line)}</span><br>`;
+                    });
+                    
+                    contentArea.innerHTML = html;
+                };
+                reader.readAsText(file);
+            });
+
+            function escapeHtml(text) {
+                return text
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+        </script>
+    </body>
+    </html>

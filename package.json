@@ -1,0 +1,63 @@
+{
+  "name": "fishing_book",
+  "version": "1.0.0",
+  "description": "Fishing Book (v1.0)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Fishing Book",
+  "license": "ISC",
+  "build": {
+    "appId": "com.fishingbook.app",
+    "productName": "FishingBook",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!doc/**",
+      "!tools/**",
+      "!.trae/**",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "books",
+        "to": "books",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "dependencies": {
+    "got": "^14.6.6",
+    "iconv-lite": "^0.7.2",
+    "jschardet": "^3.1.4"
+  },
+  "devDependencies": {
+    "electron": "^40.4.1",
+    "electron-builder": "^26.0.12"
+  }
+}
