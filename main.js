@@ -559,27 +559,33 @@ ipcMain.handle('v2:book:importFiles', async (event, req) => {
     let importedCount = 0;
     let skippedCount = 0;
     const errors = [];
+    const added = [];
+    const dup = [];
+    const failed = [];
     const session = readSession();
 
     for (const fp of result.filePaths) {
       if (exists.has(fp)) {
         skippedCount++;
+        dup.push({ filePath: fp, displayTitle: path.basename(fp, path.extname(fp)) });
         continue;
       }
       try {
         const st = fs.statSync(fp);
         const bookId = stableBookId(fp);
         const displayTitle = path.basename(fp, path.extname(fp));
-        doc.books.unshift({
+        const book = {
           id: bookId,
           displayTitle,
           filePath: fp,
           addedAt: now,
           lastOpenedAt: null,
           fileStat: { size: st.size, mtimeMs: st.mtimeMs }
-        });
+        };
+        doc.books.unshift(book);
         exists.add(fp);
         importedCount++;
+        added.push(book);
 
         if (session && session.lastFilePath === fp && typeof session.lastScrollRatio === 'number') {
           const p = readProgress(libraryId);
@@ -591,11 +597,12 @@ ipcMain.handle('v2:book:importFiles', async (event, req) => {
         }
       } catch (e) {
         errors.push({ filePath: fp, error: e.message });
+        failed.push({ filePath: fp, displayTitle: path.basename(fp, path.extname(fp)), reason: e.message });
       }
     }
 
     writeBooks(libraryId, doc);
-    return { success: true, importedCount, skippedCount, errors };
+    return { success: true, importedCount, skippedCount, errors, added, dup, failed };
   } catch (e) {
     return { success: false, error: e.message };
   }

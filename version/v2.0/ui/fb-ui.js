@@ -675,6 +675,14 @@
         // treat them as picked file descriptors.
         const looksLikeBook = (raw.added||[]).some(x=>x && (x.id || x.addedAt));
         if(looksLikeBook){
+          if(typeof window.electronAPI?.bookList === "function"){
+            try{
+              const list = await window.electronAPI.bookList(libId);
+              if(list && list.success && Array.isArray(list.books)){
+                writeBooks(libId, { schemaVersion:"2.0", libraryId: libId, books: list.books });
+              }
+            }catch(_e){}
+          }
           // Main process already imported; keep shape but don't mutate prototype storage.
           return {
             added: normalized.added.map(x=>({ displayTitle:x.displayTitle, filePath:x.filePath })),
