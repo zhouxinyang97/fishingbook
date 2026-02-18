@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Fishing Book v2.0 · 阅读器</title>
+    <link rel="stylesheet" href="./fb-ui.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="window sim-window" role="application" aria-label="Fishing Book v2.0 原型 · 阅读器（可拖拽缩放）">
+        <div class="window-bar">
+          <div class="brand" style="gap:12px;">
+            <a class="btn btn-ghost" id="btnBack" href="./bookshelf.html" title="返回书架">← 书架</a>
+            <div style="min-width:0;">
+              <div class="title" id="bookTitle">未选择书本</div>
+              <div class="subtitle" id="bookSub">v2.0 · 阅读器</div>
+            </div>
+          </div>
+          <div class="bar-actions" aria-label="阅读器工具栏">
+            <span class="pill" id="progressPill" title="按书保存/恢复进度（scrollRatio）">
+              进度 <span class="kbd" id="progressText">—</span>
+            </span>
+            <span class="pill" title="原型模拟：拖拽标题栏空白区域移动；拖拽右下角缩放">可拖拽/缩放</span>
+            <button class="btn" type="button" id="btnTop" title="回到顶部（可选能力）">回到顶部</button>
+            <button class="btn" type="button" id="btnPin" aria-pressed="false" title="置顶（演示）">置顶</button>
+            <button class="btn" type="button" id="btnAppearance" aria-haspopup="dialog" aria-label="外观设置">外观</button>
+            <button class="btn btn-ghost" type="button" id="btnMore" aria-haspopup="dialog" aria-label="更多">⋯</button>
+          </div>
+        </div>
+
+        <div class="debug" data-debug-panel>
+          <label for="stateSel3">状态</label>
+          <select id="stateSel3" data-debug-state aria-label="切换页面状态">
+            <option value="default">default</option>
+            <option value="loading">loading</option>
+            <option value="empty">empty</option>
+            <option value="error">error</option>
+          </select>
+          <span class="pill">debug</span>
+        </div>
+
+        <div class="content">
+          <!-- Loading -->
+          <div class="state" data-state="loading">
+            <div class="card">
+              <div class="card-hd">
+                <div>
+                  <div class="card-title">正在加载书本…</div>
+                  <div class="card-desc">读文件 / 解码 / 渲染期间：正文区展示轻量 Loading，不阻塞置顶与返回操作（演示）。</div>
+                </div>
+                <span class="badge">loading</span>
+              </div>
+              <div class="card-bd">
+                <div class="reader-wrap" aria-busy="true">
+                  <div class="reader" aria-hidden="true">
+                    <div class="skeleton big" style="margin-bottom:12px;"></div>
+                    <div class="skeleton" style="width:84%; margin-bottom:10px;"></div>
+                    <div class="skeleton" style="width:92%; margin-bottom:10px;"></div>
+                    <div class="skeleton" style="width:78%; margin-bottom:10px;"></div>
+                    <div class="skeleton" style="width:88%; margin-bottom:10px;"></div>
+                    <div class="skeleton" style="width:67%; margin-bottom:10px;"></div>
+                    <div class="skeleton" style="width:90%; margin-bottom:10px;"></div>
+                    <div class="skeleton" style="width:72%; margin-bottom:10px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty -->
+          <div class="state" data-state="empty">
+            <div class="card">
+              <div class="card-hd">
+                <div>
+                  <div class="card-title">还没有打开任何书本</div>
+                  <div class="card-desc">从书架选择一本书进入阅读器；或一键打开“最后阅读”。</div>
+                </div>
+                <span class="badge warn">empty</span>
+              </div>
+              <div class="card-bd">
+                <div class="empty" style="padding:18px 10px;">
+                  <div class="illus" aria-hidden="true"></div>
+                  <h2>从书架开始</h2>
+                  <p>v2.0：打开书本时恢复进度，滚动阅读时保存进度，不同书互不覆盖。</p>
+                  <div class="cta">
+                    <a class="btn btn-primary" id="btnBackEmpty" href="./bookshelf.html">返回书架</a>
+                    <button class="btn" type="button" id="btnOpenLast">打开最后阅读</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Default -->
+          <div class="state" data-state="default">
+            <div class="reader-wrap">
+              <div id="reader" class="reader" tabindex="0" aria-label="正文区域（可滚动）"></div>
+            </div>
+            <div class="sep"></div>
+            <div class="muted" style="font-size:12.5px; line-height:1.65;">
+              自动保存策略（PRD）：滚动时节流/合并写入，建议 ≤ 1 次/2 秒。原型将进度写入 localStorage，便于跨页演示“按书恢复进度”。
+            </div>
+          </div>
+
+          <!-- Error -->
+          <div class="state" data-state="error">
+            <div class="card">
+              <div class="card-hd">
+                <div>
+                  <div class="card-title">无法打开书本</div>
+                  <div class="card-desc" id="errDetail">解码失败 / 文件读取失败（演示）</div>
+                </div>
+                <span class="badge bad">error</span>
+              </div>
+              <div class="card-bd">
+                <div class="empty" style="padding:18px 10px;">
+                  <div class="illus" aria-hidden="true"></div>
+                  <h2>请检查文件是否存在、是否有读取权限</h2>
+                  <p>你可以返回书架，或重新定位到新路径（保留原 bookId 以延续进度）。</p>
+                  <div class="cta">
+                    <a class="btn btn-primary" id="btnBack2" href="./bookshelf.html">返回书架</a>
+                    <button class="btn" type="button" id="btnRelink2">重新定位文件</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resize overlay (prototype) -->
+        <div class="resize-overlay" aria-hidden="true">
+          <div class="resize-overlay-card">
+            缩放中，松开后恢复渲染
+            <span class="resize-overlay-meta" data-resize-meta></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-wrap" data-toast-wrap aria-live="polite" aria-relevant="additions"></div>
+
+    <!-- Modal: more -->
+    <div class="modal-backdrop" id="mMore" role="dialog" aria-modal="true" aria-label="更多操作">
+      <div class="modal">
+        <div class="modal-hd">
+          <div class="modal-title">更多</div>
+          <button class="btn btn-ghost" type="button" data-modal-close="mMore" aria-label="关闭">✕</button>
+        </div>
+        <div class="modal-bd">
+          <div class="list" aria-label="阅读器操作">
+            <div class="item">
+              <div class="item-main">
+                <div class="item-title">复制文件路径</div>
+                <div class="item-sub" id="pathPreview">—</div>
+              </div>
+              <div class="item-actions">
+                <button class="btn" type="button" id="btnCopyPath">复制</button>
+              </div>
+            </div>
+            <div class="item">
+              <div class="item-main">
+                <div class="item-title">模拟错误态</div>
+                <div class="item-sub">用于评审：解码失败/读取失败处理</div>
+              </div>
+              <div class="item-actions">
+                <a class="btn btn-danger" href="./reader.html?state=error&err=decode">进入错误态</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-ft">
+          <button class="btn" type="button" data-modal-close="mMore">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: relink (mock) -->
+    <div class="modal-backdrop" id="mRelink" role="dialog" aria-modal="true" aria-label="重新定位文件">
+      <div class="modal">
+        <div class="modal-hd">
+          <div class="modal-title">重新定位文件</div>
+          <button class="btn btn-ghost" type="button" data-modal-close="mRelink" aria-label="关闭">✕</button>
+        </div>
+        <div class="modal-bd">
+          <div class="muted">（原型模拟文件选择器：选择新路径后保留原 bookId）</div>
+          <div class="sep"></div>
+          <div class="list">
+            <div class="item">
+              <div class="item-main">
+                <div class="item-title">已恢复：射雕英雄传.txt</div>
+                <div class="item-sub">D:\Books\Recovered\射雕英雄传.txt</div>
+              </div>
+              <div class="item-actions">
+                <button class="btn btn-primary" type="button" data-relink-path="D:\\Books\\Recovered\\射雕英雄传.txt">选择</button>
+              </div>
+            </div>
+            <div class="item">
+              <div class="item-main">
+                <div class="item-title">选择其他：修复文件.txt</div>
+                <div class="item-sub">D:\Books\Recovered\修复文件.txt</div>
+              </div>
+              <div class="item-actions">
+                <button class="btn btn-primary" type="button" data-relink-path="D:\\Books\\Recovered\\修复文件.txt">选择</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-ft">
+          <button class="btn" type="button" data-modal-close="mRelink">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: appearance -->
+    <div class="modal-backdrop" id="mAppearance" role="dialog" aria-modal="true" aria-label="外观设置">
+      <div class="modal">
+        <div class="modal-hd">
+          <div>
+            <div class="modal-title">外观设置（全局）</div>
+            <div class="card-desc" style="margin-top:6px;">对全应用生效：书架/阅读器/书库选择均同步。</div>
+          </div>
+          <button class="btn btn-ghost" type="button" data-modal-close="mAppearance" aria-label="关闭">✕</button>
+        </div>
+        <div class="modal-bd">
+          <div class="field">
+            <div class="field-label">
+              <span>全局透明度</span>
+              <span class="kbd" id="opacityValue">—</span>
+            </div>
+            <input class="range" id="opacityRange" type="range" min="0.65" max="1" step="0.01" value="0.92" />
+            <div class="field-help">建议范围 65%–100%。透明度越低，背景透出越明显（原型以“玻璃”层级模拟）。</div>
+          </div>
+          <div class="sep"></div>
+          <div class="field">
+            <div class="field-label">
+              <span>主题色</span>
+              <span class="muted" style="font-weight:600; font-size:12px;">用于高亮 / 焦点 / 主按钮</span>
+            </div>
+            <div class="theme-grid" role="radiogroup" aria-label="主题色">
+              <label class="theme-opt">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="swatch teal" aria-hidden="true"></span>
+                  <div>
+                    <div style="font-weight:650; font-size:13px;">青绿</div>
+                    <div class="muted" style="font-size:12px;">默认</div>
+                  </div>
+                </div>
+                <input type="radio" name="theme" value="teal" />
+              </label>
+              <label class="theme-opt">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="swatch blue" aria-hidden="true"></span>
+                  <div><div style="font-weight:650; font-size:13px;">蓝色</div></div>
+                </div>
+                <input type="radio" name="theme" value="blue" />
+              </label>
+              <label class="theme-opt">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="swatch violet" aria-hidden="true"></span>
+                  <div><div style="font-weight:650; font-size:13px;">紫色</div></div>
+                </div>
+                <input type="radio" name="theme" value="violet" />
+              </label>
+              <label class="theme-opt">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="swatch amber" aria-hidden="true"></span>
+                  <div><div style="font-weight:650; font-size:13px;">琥珀</div></div>
+                </div>
+                <input type="radio" name="theme" value="amber" />
+              </label>
+              <label class="theme-opt">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="swatch rose" aria-hidden="true"></span>
+                  <div><div style="font-weight:650; font-size:13px;">玫红</div></div>
+                </div>
+                <input type="radio" name="theme" value="rose" />
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-ft">
+          <button class="btn btn-danger" type="button" id="btnAppearanceReset">恢复默认</button>
+          <button class="btn btn-primary" type="button" id="btnAppearanceDone">完成</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./fb-ui.js"></script>
+    <script>
+      FB.initBase();
+
+      const p = FB.parseParams();
+      const state = p.get("state") || "default";
+      const err = p.get("err") || "decode";
+      const libraryId = p.get("libraryId") || localStorage.getItem("fb_v2_activeLibraryId") || FB.data.getLibraries().activeLibraryId;
+      const bookId = p.get("bookId") || (state === "empty" ? null : (FB.data.getProgress(libraryId).lastReadBookId || "book_shediao"));
+
+      const btnBack = FB.qs("#btnBack");
+      const btnBack2 = FB.qs("#btnBack2");
+      const btnBackEmpty = FB.qs("#btnBackEmpty");
+      const btnOpenLast = FB.qs("#btnOpenLast");
+      const bookTitle = FB.qs("#bookTitle");
+      const bookSub = FB.qs("#bookSub");
+      const reader = FB.qs("#reader");
+      const progressText = FB.qs("#progressText");
+      const progressPill = FB.qs("#progressPill");
+      const errDetail = FB.qs("#errDetail");
+      const pathPreview = FB.qs("#pathPreview");
+      const btnAppearance = FB.qs("#btnAppearance");
+      const opacityRange = FB.qs("#opacityRange");
+      const opacityValue = FB.qs("#opacityValue");
+      const btnAppearanceReset = FB.qs("#btnAppearanceReset");
+      const btnAppearanceDone = FB.qs("#btnAppearanceDone");
+
+      let activeBook = null;
+      let saveTimer = null;
+      let lastSaveAt = 0;
+
+      function escapeHTML(s){
+        return String(s).replace(/[&<>"']/g, (c)=>({
+          "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+        }[c]));
+      }
+
+      function loadBook(){
+        if(!libraryId){
+          bookTitle.textContent = "未选择书库";
+          return;
+        }
+        FB.data.setActiveLibrary(libraryId);
+        const doc = FB.data.getBooks(libraryId);
+        activeBook = bookId ? (doc.books.find(b=>b.id===bookId) || null) : null;
+
+        const backHref = `./bookshelf.html?libraryId=${encodeURIComponent(libraryId)}`;
+        btnBack.href = backHref;
+        if(btnBack2) btnBack2.href = backHref;
+        if(btnBackEmpty) btnBackEmpty.href = backHref;
+
+        if(!activeBook){
+          bookTitle.textContent = "未选择书本";
+          bookSub.textContent = "v2.0 · 阅读器 · 请从书架打开";
+          pathPreview.textContent = "—";
+          // 若用户指定了 bookId 但找不到记录，进入错误态（更贴近“文件缺失/记录缺失”异常路径）
+          if(bookId && state !== "empty"){
+            FB.setParam("state", "error");
+            FB.setParam("err", "missing");
+            FB.applyState();
+            errDetail.textContent = "未找到书本记录（演示）";
+          }
+          return;
+        }
+
+        bookTitle.textContent = activeBook.displayTitle;
+        bookSub.textContent = `v2.0 · 阅读器 · ${activeBook.filePath}`;
+        pathPreview.textContent = activeBook.filePath;
+        if(activeBook.missing){
+          FB.setParam("state", "error");
+          FB.setParam("err", "missing");
+          FB.applyState();
+          errDetail.textContent = "文件不存在 / 被移动（演示）";
+        }
+      }
+
+      function renderContent(){
+        if(!reader || !activeBook) return;
+        const name = activeBook.displayTitle;
+        const lines = [];
+        lines.push(`<h1>${escapeHTML(name)}</h1>`);
+        lines.push(`<div class="hint">提示：滚动阅读会自动保存进度；再次打开将按书恢复（scrollRatio）。可在 URL 加 <span class="kbd">?debug=1</span> 切换状态。</div>`);
+
+        // 生成足够长的内容以演示滚动/恢复
+        const base = [
+          "夜色像一层薄薄的墨，落在屏幕的网格上。",
+          "你翻过一页，光标没有闪烁，但进度在悄悄记录。",
+          "这是一段用于原型演示的文本：它不追求真实内容，只追求真实阅读体验。",
+          "当文件变大或变小，scrollRatio 恢复可能偏移；v2.0 可接受，并可提供“回到顶部”入口。",
+        ];
+        for(let s=1; s<=16; s++){
+          lines.push(`<h2>第 ${s} 节</h2>`);
+          for(let i=0; i<7; i++){
+            const t = base[(s+i)%base.length];
+            lines.push(`<p>${escapeHTML(t)} <span class="faint">#${s}-${i+1}</span></p>`);
+          }
+        }
+        reader.innerHTML = lines.join("");
+      }
+
+      function ratioFromScroll(el){
+        const denom = (el.scrollHeight - el.clientHeight);
+        if(denom <= 0) return 0;
+        return el.scrollTop / denom;
+      }
+
+      function scrollToRatio(el, r){
+        const denom = (el.scrollHeight - el.clientHeight);
+        if(denom <= 0) return;
+        el.scrollTop = Math.round(denom * r);
+      }
+
+      function updateProgressPill(r){
+        const pct = Math.round(r * 100);
+        progressText.textContent = `${pct}%`;
+        progressPill.title = `按书保存/恢复进度（scrollRatio=${r.toFixed(3)}）`;
+      }
+
+      function restoreProgress(){
+        if(!activeBook || !reader) return;
+        const prog = FB.data.getProgress(libraryId);
+        const r = prog.progressByBookId?.[activeBook.id]?.scrollRatio ?? 0;
+        // 下一帧保证 scrollHeight 就绪
+        requestAnimationFrame(()=>{
+          scrollToRatio(reader, r);
+          updateProgressPill(ratioFromScroll(reader));
+          if(r > 0) FB.toast("已恢复上次进度", `约 ${Math.round(r*100)}%`);
+        });
+      }
+
+      function scheduleSave(){
+        if(state !== "default") return;
+        if(!activeBook || !reader) return;
+        if(saveTimer) return;
+        saveTimer = setTimeout(()=>{
+          saveTimer = null;
+          const now = Date.now();
+          if(now - lastSaveAt < 2000) return; // ≤ 1 次/2 秒
+          lastSaveAt = now;
+          const r = ratioFromScroll(reader);
+          FB.data.updateProgress(libraryId, activeBook.id, r);
+          FB.toast("已自动保存进度", `${Math.round(r*100)}%`);
+        }, 320); // 合并短时间滚动
+      }
+
+      // toolbar actions
+      FB.qs("#btnTop").addEventListener("click", ()=>{
+        if(!reader) return;
+        reader.scrollTo({ top: 0, behavior: "smooth" });
+      });
+      FB.qs("#btnPin").addEventListener("click", (e)=>{
+        const btn = e.currentTarget;
+        const on = btn.getAttribute("aria-pressed") === "true";
+        btn.setAttribute("aria-pressed", String(!on));
+        btn.classList.toggle("btn-primary", !on);
+        FB.toast(!on ? "已置顶（演示）" : "已取消置顶（演示）");
+      });
+      btnAppearance?.addEventListener("click", ()=> FB.openModal("mAppearance"));
+      FB.qs("#btnMore").addEventListener("click", ()=> FB.openModal("mMore"));
+      FB.qs("#btnCopyPath").addEventListener("click", ()=>{
+        if(!activeBook) return;
+        try{
+          navigator.clipboard?.writeText(activeBook.filePath);
+          FB.toast("已复制路径", "（若浏览器限制剪贴板则仅提示）");
+        }catch(e){
+          FB.toast("复制失败", "请手动复制");
+        }
+      });
+
+      // error relink
+      FB.qs("#btnRelink2")?.addEventListener("click", ()=> FB.openModal("mRelink"));
+      FB.qsa("[data-relink-path]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          if(!activeBook) return;
+          const newPath = btn.getAttribute("data-relink-path");
+          FB.data.relinkBook(libraryId, activeBook.id, newPath);
+          FB.closeModal("mRelink");
+          FB.toast("已重新定位文件", "返回正文…");
+          // return to default view
+          location.href = `./reader.html?libraryId=${encodeURIComponent(libraryId)}&bookId=${encodeURIComponent(activeBook.id)}`;
+        });
+      });
+
+      // scroll save
+      function onScroll(){
+        const r = ratioFromScroll(reader);
+        updateProgressPill(r);
+        scheduleSave();
+      }
+      reader?.addEventListener("scroll", onScroll, { passive:true });
+
+      // init
+      loadBook();
+
+      // appearance (global)
+      function syncAppearanceUI(){
+        const s = FB.settings.get();
+        const op = s.appearance?.globalOpacity ?? 0.92;
+        if(opacityRange) opacityRange.value = String(op);
+        if(opacityValue) opacityValue.textContent = `${Math.round(op*100)}%`;
+        const theme = s.appearance?.theme ?? "teal";
+        FB.qsa('input[name="theme"]').forEach(r=>{
+          r.checked = (r.value === theme);
+        });
+      }
+      syncAppearanceUI();
+      opacityRange?.addEventListener("input", ()=>{
+        const v = Math.max(0.65, Math.min(1, Number(opacityRange.value)||0.92));
+        opacityValue.textContent = `${Math.round(v*100)}%`;
+        FB.settings.setAppearance({ globalOpacity: v });
+      });
+      FB.qsa('input[name="theme"]').forEach(r=>{
+        r.addEventListener("change", ()=>{
+          if(r.checked) FB.settings.setAppearance({ theme: r.value });
+        });
+      });
+      btnAppearanceReset?.addEventListener("click", ()=>{
+        FB.settings.resetAppearance();
+        syncAppearanceUI();
+        FB.toast("已恢复默认外观", "全局生效");
+      });
+      btnAppearanceDone?.addEventListener("click", ()=>{
+        FB.closeModal("mAppearance");
+        FB.toast("外观已保存", "settings.v2.0.json（localStorage）");
+      });
+
+      // deep link: ?open=appearance
+      if(p.get("open") === "appearance"){
+        FB.openModal("mAppearance");
+      }
+
+      // empty quick action
+      btnOpenLast?.addEventListener("click", ()=>{
+        const last = FB.data.getProgress(libraryId).lastReadBookId;
+        if(!last){
+          FB.toast("没有最后阅读记录");
+          return;
+        }
+        location.href = `./reader.html?libraryId=${encodeURIComponent(libraryId)}&bookId=${encodeURIComponent(last)}`;
+      });
+      if(state === "error"){
+        errDetail.textContent = err === "decode" ? "解码失败：文件编码不支持（演示）"
+          : err === "read" ? "读取失败：权限不足（演示）"
+          : err === "missing" ? "文件缺失：路径无效（演示）"
+          : "未知错误（演示）";
+      }
+      if(state === "default"){
+        if(!activeBook){
+          // 未选择书本：进入空态（满足“空/加载/错误态”覆盖）
+          FB.setParam("state", "empty");
+          FB.applyState();
+        }else{
+        renderContent();
+        restoreProgress();
+        // 提供初始 pill
+        updateProgressPill(0);
+        }
+      }
+      if(state === "loading"){
+        // 模拟加载完成后进入默认态（便于演示）
+        setTimeout(()=>{
+          if(FB.parseParams().get("state") === "loading"){
+            location.href = `./reader.html?libraryId=${encodeURIComponent(libraryId)}&bookId=${encodeURIComponent(bookId)}`;
+          }
+        }, 900);
+      }
+    </script>
+  </body>
+</html>
