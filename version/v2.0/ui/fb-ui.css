@@ -531,66 +531,6 @@ body.native .window-bar label{
   min-width: min(560px, 92vw);
 }
 
-/* ---------- Window simulation (prototype only) ----------
-   - Drag: title bar blank area (JS)
-   - Resize: CSS resize + ResizeObserver overlay (JS) */
-.app{
-  position:relative;
-  overflow:hidden;
-}
-.window.sim-window{
-  width:1080px;
-  height:740px;
-  max-width: calc(100vw - 48px);
-  max-height: calc(100vh - 48px);
-  min-width: 340px;
-  min-height: 360px;
-  resize: both;
-  overflow:hidden;
-  position:absolute;
-  display:flex;
-  flex-direction:column;
-}
-.window.sim-window .content{
-  flex:1;
-  overflow:auto;
-  -webkit-overflow-scrolling: touch;
-}
-.window.sim-window .window-bar{
-  cursor: grab;
-  user-select:none;
-}
-.window.sim-window.is-dragging .window-bar{ cursor: grabbing; }
-.window.sim-window.is-resizing .content{
-  opacity:.25;
-  filter: blur(1px);
-}
-.resize-overlay{
-  position:absolute; inset:0;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  background:
-    radial-gradient(520px 280px at 40% 35%, rgb(var(--accent2-rgb) / .18), transparent 60%),
-    radial-gradient(420px 240px at 70% 55%, rgb(var(--accent-rgb) / .14), transparent 62%),
-    rgba(0,0,0,.42);
-  z-index:20;
-  pointer-events:none;
-}
-.window.is-resizing .resize-overlay{ display:flex; }
-.resize-overlay-card{
-  border:1px solid var(--border2);
-  background: rgba(7,11,21,.72);
-  border-radius: 16px;
-  padding:12px 14px;
-  box-shadow: 0 18px 60px rgba(0,0,0,.55);
-  color: rgba(233,238,252,.95);
-  font-size:13px;
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
 /* Native resize handles (Electron frameless window) */
 .native-resizer{
   position: fixed;
@@ -605,11 +545,6 @@ body.native .window-bar label{
 .native-resizer.b{ bottom:0; left:14px; right:14px; height:6px; cursor:ns-resize; }
 .native-resizer.l{ left:0; top:14px; bottom:14px; width:6px; cursor:ew-resize; }
 .native-resizer.r{ right:0; top:14px; bottom:14px; width:6px; cursor:ew-resize; }
-.resize-overlay-meta{
-  font-family: var(--mono);
-  font-size:12px;
-  color: var(--muted);
-}
 
 /* ---------- Appearance controls ---------- */
 .field{
@@ -672,33 +607,6 @@ body.native .window-bar label{
   font-family: var(--mono);
   font-size:12px;
 }
-
-/* Debug panel (hidden unless enabled via ?debug=1) */
-.debug{
-  position:absolute;
-  right:12px;
-  top:56px;
-  border:1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(7,11,21,.70);
-  padding:10px 10px;
-  display:none;
-  gap:10px;
-  align-items:center;
-  z-index:10;
-}
-.debug.is-on{ display:flex; }
-.debug label{ font-size:12px; color: var(--muted); }
-.debug select{
-  border:1px solid var(--border);
-  background: rgba(10,16,32,.65);
-  color: var(--text);
-  border-radius: 12px;
-  padding:8px 10px;
-  font-size:12px;
-  outline:none;
-}
-.debug select:focus{ box-shadow: var(--ring); border-color: rgba(94,234,212,.55); }
 
 /* Reader content look */
 .reader-wrap{

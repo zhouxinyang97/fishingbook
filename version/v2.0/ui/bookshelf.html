@@ -3,13 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
-    <title>Fishing Book v2.0 · 书架</title>
+    <title>Fishing Book · v2.0 · 书架</title>
     <link rel="stylesheet" href="./fb-ui.css" />
   </head>
   <body>
     <div class="app">
-      <div class="window sim-window" role="application" aria-label="Fishing Book v2.0 原型 · 书架（可拖拽缩放）">
+      <div class="window" role="application" aria-label="Fishing Book v2.0 · 书架">
         <div class="window-bar">
           <div class="brand">
             <div class="logo" aria-hidden="true"></div>
@@ -17,7 +16,6 @@
             <div class="subtitle" id="barSubtitle">v2.0 · 书架</div>
           </div>
           <div class="bar-actions" aria-label="书架工具栏">
-            <span class="pill" title="原型模拟：拖拽标题栏空白区域移动；拖拽右下角缩放">可拖拽/缩放</span>
             <button class="btn" type="button" id="btnLibSwitcher" aria-haspopup="dialog">
               <span aria-hidden="true">🗂</span>
               <span id="activeLibName">当前书库</span>
@@ -30,162 +28,80 @@
           </div>
         </div>
 
-        <div class="debug" data-debug-panel>
-          <label for="stateSel2">状态</label>
-          <select id="stateSel2" data-debug-state aria-label="切换页面状态">
-            <option value="default">default</option>
-            <option value="loading">loading</option>
-            <option value="empty">empty</option>
-            <option value="error">error</option>
-          </select>
-          <span class="pill">debug</span>
-        </div>
-
         <div class="content">
-          <!-- Error banner (only in error state) -->
-          <div class="state" data-state="error" style="margin-bottom:12px;">
-            <div class="banner" role="alert">
-              <div class="msg">
-                书库处于只读模式：无法写入书本清单 / 阅读进度
-                <div class="sub">原因示例：路径不可写（无权限） / JSON 写入失败</div>
-              </div>
-              <a class="btn btn-ghost" href="./library-picker.html?state=default" title="返回书库选择">切换书库</a>
-            </div>
-          </div>
-
-          <div class="grid">
+          <div class="grid cols-2">
             <section class="card">
-              <div class="card-hd">
-                <div style="flex:1; min-width:0;">
-                  <div class="card-title">搜索</div>
-                  <div class="card-desc">按标题或路径关键词过滤。小窗口宽度 &lt; 360px 会隐藏更新时间列。</div>
-                </div>
-                <div class="pill" title="键盘提示：在搜索框按 Enter 不会提交表单，仅保留焦点">
-                  <span class="muted">快捷键</span> <span class="kbd">Tab</span>
-                </div>
-              </div>
-              <div class="card-bd">
-                <div class="input" role="search">
-                  <span aria-hidden="true">⌕</span>
-                  <input id="search" type="text" placeholder="关键字…" autocomplete="off" />
-                </div>
-              </div>
-            </section>
-
-            <aside class="card">
               <div class="card-hd">
                 <div>
                   <div class="card-title">继续阅读</div>
-                  <div class="card-desc">对齐 PRD “最近阅读/继续阅读”卡片；按书恢复进度（scrollRatio）。</div>
+                  <div class="card-desc">打开一本书后会自动出现在这里。</div>
                 </div>
               </div>
+              <div class="card-bd" id="continueCardWrap"></div>
+            </section>
+
+            <section class="card">
+              <div class="card-hd">
+                <div>
+                  <div class="card-title">书本列表</div>
+                  <div class="card-desc">支持：打开、重命名显示名、移除、文件缺失修复。</div>
+                </div>
+                <div class="row">
+                  <input class="input" id="search" placeholder="搜索书名/路径…" autocomplete="off" />
+                </div>
+              </div>
+
               <div class="card-bd">
-                <div class="state" data-state="loading" aria-hidden="true">
-                  <div class="skeleton big"></div>
+                <div class="state is-active" data-state="loading">
+                  <div class="skeleton" style="height:14px; width:56%;"></div>
+                  <div style="height:10px;"></div>
+                  <div class="skeleton" style="height:14px; width:92%;"></div>
+                  <div style="height:10px;"></div>
+                  <div class="skeleton" style="height:14px; width:78%;"></div>
                 </div>
-                <div class="state" data-state="default" id="continueCardWrap"></div>
+
+                <div class="state" data-state="default">
+                  <div class="t-head" role="rowgroup">
+                    <div class="t-row t-row-head" role="row">
+                      <div class="t-cell" role="columnheader">书本</div>
+                      <div class="t-cell hide-xs" role="columnheader">更新时间</div>
+                      <div class="t-cell" role="columnheader">状态</div>
+                      <div class="t-cell t-actions" role="columnheader">操作</div>
+                    </div>
+                  </div>
+                  <div class="t-body" id="bookRows" role="rowgroup" aria-label="书本列表"></div>
+                </div>
+
                 <div class="state" data-state="empty">
-                  <div class="empty" style="padding:14px 12px;">
-                    <h2>暂无可续读书本</h2>
-                    <p>导入并打开书本后，这里会显示最后阅读的一本。</p>
+                  <div class="empty">
+                    <div class="illus" aria-hidden="true"></div>
+                    <h2>书架里还没有书本</h2>
+                    <p>点击“导入书本”从本地选择 <span class="kbd">.txt</span> / <span class="kbd">.log</span> / <span class="kbd">.md</span>。</p>
+                    <div class="cta">
+                      <button class="btn btn-primary" type="button" data-open-import>
+                        <span aria-hidden="true">＋</span> 导入书本
+                      </button>
+                    </div>
                   </div>
                 </div>
+
                 <div class="state" data-state="error">
-                  <div class="empty" style="padding:14px 12px;">
-                    <h2>只读模式</h2>
-                    <p>仍可打开已导入书本，但进度可能无法保存。</p>
+                  <div class="empty">
+                    <div class="illus" aria-hidden="true"></div>
+                    <h2>无法加载书本清单</h2>
+                    <p>请尝试切换书库或检查文件权限。</p>
+                    <div class="cta">
+                      <a class="btn btn-primary" href="./library-picker.html" title="返回书库选择">返回书库选择</a>
+                    </div>
                   </div>
                 </div>
               </div>
-            </aside>
-          </div>
-
-          <div style="height:14px;"></div>
-
-          <section class="card">
-            <div class="card-hd">
-              <div>
-                <div class="card-title">书本列表</div>
-                <div class="card-desc">支持：打开、重命名显示名、移除、文件缺失修复（重新定位/移除）。</div>
-              </div>
-              <div class="pill">
-                <span class="muted">演示</span>
-                <a href="./library-picker.html" title="返回书库选择">书库选择</a>
-              </div>
-            </div>
-            <div class="card-bd">
-              <!-- Default -->
-              <div class="state" data-state="default">
-                <div class="table" role="table" aria-label="书本表格">
-                  <div class="t-head" role="row">
-                    <div class="t-cell" role="columnheader">书名</div>
-                    <div class="t-cell hide-xs" role="columnheader">更新时间</div>
-                    <div class="t-cell" role="columnheader">状态</div>
-                    <div class="t-cell" role="columnheader" style="text-align:right;">操作</div>
-                  </div>
-                  <div id="bookRows"></div>
-                </div>
-                <div class="sep"></div>
-                <div class="muted" style="font-size:12.5px; line-height:1.65;">
-                  提示：若书本文件被移动/删除，列表会标记“文件缺失”。点击“打开”将进入修复流程：重新定位文件 / 从书库移除。
-                </div>
-              </div>
-
-              <!-- Empty -->
-              <div class="state" data-state="empty">
-                <div class="empty">
-                  <div class="illus" aria-hidden="true"></div>
-                  <h2>书架里还没有书本</h2>
-                  <p>支持导入 <span class="kbd">.txt</span> / <span class="kbd">.log</span> / <span class="kbd">.md</span>（保持与现有读取能力一致）。</p>
-                  <div class="cta">
-                    <button class="btn btn-primary" type="button" data-open-import>
-                      <span aria-hidden="true">＋</span> 导入书本
-                    </button>
-                    <a class="btn" href="./reader.html?state=loading" title="跳转到阅读器加载态（演示用）">查看阅读器加载态</a>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Loading -->
-              <div class="state" data-state="loading" aria-busy="true">
-                <div class="table" aria-hidden="true">
-                  <div class="t-head"><div>书名</div><div class="hide-xs">更新时间</div><div>状态</div><div style="text-align:right;">操作</div></div>
-                  <div class="t-row"><div class="skeleton" style="width:70%"></div><div class="skeleton hide-xs" style="width:56%"></div><div class="skeleton" style="width:50%"></div><div class="skeleton" style="width:110px; justify-self:end;"></div></div>
-                  <div class="t-row"><div class="skeleton" style="width:76%"></div><div class="skeleton hide-xs" style="width:64%"></div><div class="skeleton" style="width:42%"></div><div class="skeleton" style="width:110px; justify-self:end;"></div></div>
-                  <div class="t-row"><div class="skeleton" style="width:62%"></div><div class="skeleton hide-xs" style="width:52%"></div><div class="skeleton" style="width:48%"></div><div class="skeleton" style="width:110px; justify-self:end;"></div></div>
-                </div>
-              </div>
-
-              <!-- Error -->
-              <div class="state" data-state="error">
-                <div class="empty">
-                  <div class="illus" aria-hidden="true"></div>
-                  <h2>无法加载书本清单</h2>
-                  <p>请尝试切换到其他书库，或检查当前书库路径是否可写。</p>
-                  <div class="cta">
-                    <a class="btn btn-primary" href="./library-picker.html" title="返回书库选择">返回书库选择</a>
-                    <button class="btn" type="button" id="btnResetBooks">恢复演示数据</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <!-- Resize overlay (prototype) -->
-        <div class="resize-overlay" aria-hidden="true">
-          <div class="resize-overlay-card">
-            缩放中，松开后恢复渲染
-            <span class="resize-overlay-meta" data-resize-meta></span>
+            </section>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Toast -->
-    <div class="toast-wrap" data-toast-wrap aria-live="polite" aria-relevant="additions"></div>
-
-    <!-- Modal: library switcher -->
     <div class="modal-backdrop" id="mLibs" role="dialog" aria-modal="true" aria-label="切换书库">
       <div class="modal">
         <div class="modal-hd">
@@ -194,8 +110,6 @@
         </div>
         <div class="modal-bd">
           <div class="list" id="libListModal" aria-label="书库列表"></div>
-          <div class="sep"></div>
-          <a class="btn btn-primary" href="./library-picker.html" title="回到书库选择页">打开其他书库…</a>
         </div>
         <div class="modal-ft">
           <button class="btn" type="button" data-modal-close="mLibs">关闭</button>
@@ -203,181 +117,69 @@
       </div>
     </div>
 
-    <!-- Modal: import books -->
     <div class="modal-backdrop" id="mImport" role="dialog" aria-modal="true" aria-label="导入书本">
       <div class="modal">
         <div class="modal-hd">
-          <div>
-            <div class="modal-title">导入书本</div>
-            <div class="card-desc" style="margin-top:6px;">
-              将打开系统文件选择器，可多选 <span class="kbd">.txt</span> / <span class="kbd">.log</span> / <span class="kbd">.md</span>。导入将以原路径引用（不复制文件）。
-            </div>
-          </div>
+          <div class="modal-title">导入书本</div>
           <button class="btn btn-ghost" type="button" data-modal-close="mImport" aria-label="关闭">✕</button>
         </div>
         <div class="modal-bd">
-          <div class="row" style="align-items:flex-start;">
-            <div style="flex:1; min-width:0;">
-              <div class="card-title" style="font-size:13px;">选择方式</div>
-              <div class="card-desc" id="importModeHint">检测中…</div>
-            </div>
-            <span class="badge" id="importModeBadge">—</span>
-          </div>
-
+          <div class="muted">将打开系统文件选择器，可多选 <span class="kbd">.txt</span> / <span class="kbd">.log</span> / <span class="kbd">.md</span>（引用原路径，不复制文件）。</div>
           <div class="sep"></div>
-
-          <!-- Native picker (Electron) -->
-          <div class="state" id="importNativeView" data-import-view="native">
-            <div class="muted" style="font-size:12.5px; line-height:1.65;">
-              点击下方“选择文件…”将打开系统文件选择器。选择完成后会在此处展示导入结果（新增 / 跳过重复 / 失败）。
-            </div>
-            <div class="sep"></div>
-            <div class="muted" style="font-size:12.5px; line-height:1.65;">
-              Electron 调用：<span class="kbd">window.electronAPI.bookImportFiles(libraryId)</span>
-            </div>
+          <div class="row" style="justify-content:flex-start; gap:10px;">
+            <button class="btn btn-primary" type="button" id="btnPickFiles">选择文件…</button>
           </div>
-
-          <!-- Fallback demo picker (non-Electron) -->
-          <div class="state" id="importFallbackView" data-import-view="fallback">
-            <div class="card-desc" style="margin-bottom:10px;">
-              非 Electron 环境：使用演示列表模拟“文件选择器”（用于原型展示与联调前占位）。
-            </div>
-            <div class="list" aria-label="演示：可导入文件">
-              <div class="item">
-                <div class="item-main">
-                  <div class="item-title">银河系漫游指南.md</div>
-                  <div class="item-sub">D:\Books\Misc\银河系漫游指南.md</div>
-                </div>
-                <div class="item-actions">
-                  <label class="pill" style="cursor:pointer;">
-                    <input type="checkbox" data-import-item checked
-                      data-title="银河系漫游指南"
-                      data-path="D:\\Books\\Misc\\银河系漫游指南.md" />
-                    选择
-                  </label>
-                </div>
-              </div>
-              <div class="item">
-                <div class="item-main">
-                  <div class="item-title">项目复盘.log</div>
-                  <div class="item-sub">D:\Docs\Logs\项目复盘.log</div>
-                </div>
-                <div class="item-actions">
-                  <label class="pill" style="cursor:pointer;">
-                    <input type="checkbox" data-import-item
-                      data-title="项目复盘"
-                      data-path="D:\\Docs\\Logs\\项目复盘.log" />
-                    选择
-                  </label>
-                </div>
-              </div>
-              <div class="item">
-                <div class="item-main">
-                  <div class="item-title">射雕英雄传.txt（重复导入示例）</div>
-                  <div class="item-sub">D:\Books\Novels\射雕英雄传.txt</div>
-                </div>
-                <div class="item-actions">
-                  <label class="pill" style="cursor:pointer;">
-                    <input type="checkbox" data-import-item
-                      data-title="射雕英雄传"
-                      data-path="D:\\Books\\Novels\\射雕英雄传.txt" />
-                    选择
-                  </label>
-                </div>
-              </div>
-              <div class="item">
-                <div class="item-main">
-                  <div class="item-title">受限目录.md（失败示例）</div>
-                  <div class="item-sub">C:\Windows\System32\受限目录.md</div>
-                </div>
-                <div class="item-actions">
-                  <label class="pill" style="cursor:pointer;">
-                    <input type="checkbox" data-import-item
-                      data-sim-fail="1"
-                      data-title="受限目录"
-                      data-path="C:\\Windows\\System32\\受限目录.md" />
-                    选择
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="sep"></div>
-
-          <div id="importResultWrap" aria-live="polite">
-            <div class="card-title" style="font-size:13px;">导入结果</div>
-            <div class="card-desc" id="importResultMeta">尚未导入。</div>
-            <div style="height:10px;"></div>
-            <div class="list" id="importResultList" aria-label="导入结果列表"></div>
-          </div>
+          <div style="height:12px;"></div>
+          <div class="card-title" style="font-size:13px;">导入结果</div>
+          <div class="card-desc" id="importResultMeta">尚未导入。</div>
+          <div style="height:10px;"></div>
+          <div class="list" id="importResultList" aria-label="导入结果列表"></div>
+          <button class="btn" type="button" id="btnDoFallbackImport" style="display:none;">fallback</button>
         </div>
         <div class="modal-ft">
-          <button class="btn" type="button" data-modal-close="mImport">关闭</button>
-          <button class="btn" type="button" id="btnDoFallbackImport">导入已选择</button>
-          <button class="btn btn-primary" type="button" id="btnPickFiles">选择文件…</button>
+          <button class="btn" type="button" data-modal-close="mImport">完成</button>
         </div>
       </div>
     </div>
 
-    <!-- Modal: missing book repair -->
-    <div class="modal-backdrop" id="mMissing" role="dialog" aria-modal="true" aria-label="修复缺失文件">
+    <div class="modal-backdrop" id="mMissing" role="dialog" aria-modal="true" aria-label="文件缺失处理">
       <div class="modal">
         <div class="modal-hd">
-          <div>
-            <div class="modal-title">文件缺失</div>
-            <div class="card-desc" id="missingPath" style="margin-top:6px;"></div>
-          </div>
+          <div class="modal-title">文件缺失</div>
           <button class="btn btn-ghost" type="button" data-modal-close="mMissing" aria-label="关闭">✕</button>
         </div>
         <div class="modal-bd">
-          该书本对应的文件可能被移动或删除。你可以重新定位到新路径（保留原 bookId 与阅读进度），或从书库移除并清理进度。
+          <div class="banner bad">
+            <div class="msg">
+              找不到该文件
+              <div class="sub" id="missingPath"></div>
+            </div>
+          </div>
+          <div class="sep"></div>
+          <div class="row" style="justify-content:flex-start; gap:10px;">
+            <button class="btn btn-primary" type="button" id="btnRelink">重新定位文件…</button>
+            <button class="btn btn-danger" type="button" id="btnRemoveBook">从书库移除</button>
+          </div>
         </div>
         <div class="modal-ft">
-          <button class="btn btn-primary" type="button" id="btnRelink">重新定位文件</button>
-          <button class="btn btn-danger" type="button" id="btnRemoveBook">从书库移除</button>
-          <button class="btn" type="button" data-modal-close="mMissing">取消</button>
+          <button class="btn" type="button" data-modal-close="mMissing">关闭</button>
         </div>
       </div>
     </div>
 
-    <!-- Modal: item actions -->
-    <div class="modal-backdrop" id="mActions" role="dialog" aria-modal="true" aria-label="更多操作">
+    <div class="modal-backdrop" id="mActions" role="dialog" aria-modal="true" aria-label="书本操作">
       <div class="modal">
         <div class="modal-hd">
           <div class="modal-title">更多操作</div>
           <button class="btn btn-ghost" type="button" data-modal-close="mActions" aria-label="关闭">✕</button>
         </div>
         <div class="modal-bd">
-          <div class="muted" id="actionsTitle" style="margin-bottom:10px;"></div>
-          <div class="list" aria-label="操作列表">
-            <div class="item">
-              <div class="item-main">
-                <div class="item-title">重命名显示名</div>
-                <div class="item-sub">不改文件名，仅书架展示</div>
-              </div>
-              <div class="item-actions">
-                <button class="btn" type="button" id="btnRename">重命名</button>
-              </div>
-            </div>
-            <div class="item">
-              <div class="item-main">
-                <div class="item-title">在资源管理器中显示</div>
-                <div class="item-sub">（原型仅提示，不真正打开）</div>
-              </div>
-              <div class="item-actions">
-                <button class="btn" type="button" id="btnReveal">显示</button>
-              </div>
-            </div>
-            <div class="item">
-              <div class="item-main">
-                <div class="item-title">从书库移除</div>
-                <div class="item-sub">同时清理该书阅读进度</div>
-              </div>
-              <div class="item-actions">
-                <button class="btn btn-danger" type="button" id="btnRemoveFromActions">移除</button>
-              </div>
-            </div>
+          <div class="muted" id="actionsTitle"></div>
+          <div class="sep"></div>
+          <div class="row" style="justify-content:flex-start; gap:10px; flex-wrap:wrap;">
+            <button class="btn" type="button" id="btnRename">重命名显示名…</button>
+            <button class="btn" type="button" id="btnReveal">复制路径</button>
+            <button class="btn btn-danger" type="button" id="btnRemoveFromActions">移除</button>
           </div>
         </div>
         <div class="modal-ft">
@@ -386,29 +188,20 @@
       </div>
     </div>
 
-    <!-- Modal: settings -->
     <div class="modal-backdrop" id="mSettings" role="dialog" aria-modal="true" aria-label="设置">
       <div class="modal">
         <div class="modal-hd">
-          <div class="modal-title">设置（原型）</div>
+          <div class="modal-title">设置</div>
           <button class="btn btn-ghost" type="button" data-modal-close="mSettings" aria-label="关闭">✕</button>
         </div>
         <div class="modal-bd">
-          <label class="pill" style="cursor:pointer;">
-            <input id="autoOpen2" type="checkbox" style="accent-color: var(--accent);" />
+          <label class="check">
+            <input type="checkbox" id="autoOpen2" />
             启动时自动打开上次书库
           </label>
           <div class="sep"></div>
-          <div class="row" style="align-items:flex-start;">
-            <div style="flex:1; min-width:0;">
-              <div class="card-title" style="font-size:13px;">外观设置（全局）</div>
-              <div class="card-desc">透明度与主题色为全局设置：在阅读器顶部“外观”中统一调整。</div>
-            </div>
-            <button class="btn" type="button" id="btnOpenAppearanceFromShelf" title="跳转到阅读器外观设置">去设置</button>
-          </div>
-          <div class="sep"></div>
-          <div class="muted" style="font-size:12.5px; line-height:1.65;">
-            v2.0 NFR：滚动保存建议 ≤ 1 次/2 秒；写入 JSON 需原子性（原型仅提示，不实现文件写入）。
+          <div class="row" style="justify-content:flex-start; gap:10px;">
+            <button class="btn" type="button" id="btnOpenAppearanceFromShelf">阅读器外观设置…</button>
           </div>
         </div>
         <div class="modal-ft">
@@ -419,459 +212,354 @@
 
     <script src="./fb-ui.js"></script>
     <script>
-      FB.initBase();
+      (async ()=>{
+        await FB.initBase();
 
-      const p = FB.parseParams();
-      const state = p.get("state") || "default";
+        const p = FB.parseParams();
+        const activeLibName = FB.qs("#activeLibName");
+        const bookRows = FB.qs("#bookRows");
+        const search = FB.qs("#search");
+        const continueWrap = FB.qs("#continueCardWrap");
+        const libListModal = FB.qs("#libListModal");
+        const autoOpen2 = FB.qs("#autoOpen2");
+        const btnOpenAppearanceFromShelf = FB.qs("#btnOpenAppearanceFromShelf");
+        const btnPickFiles = FB.qs("#btnPickFiles");
+        const btnDoFallbackImport = FB.qs("#btnDoFallbackImport");
+        const importResultMeta = FB.qs("#importResultMeta");
+        const importResultList = FB.qs("#importResultList");
 
-      let activeLibId = p.get("libraryId") || localStorage.getItem("fb_v2_activeLibraryId") || FB.data.getLibraries().activeLibraryId;
-      if(activeLibId) FB.data.setActiveLibrary(activeLibId);
+        let currentLibId = null;
+        let currentBooks = [];
+        let pendingBookId = null;
+        let pendingBookTitle = null;
+        let importInFlight = false;
 
-      const activeLibName = FB.qs("#activeLibName");
-      const bookRows = FB.qs("#bookRows");
-      const search = FB.qs("#search");
-      const continueWrap = FB.qs("#continueCardWrap");
-      const libListModal = FB.qs("#libListModal");
-      const autoOpen2 = FB.qs("#autoOpen2");
-      const btnOpenAppearanceFromShelf = FB.qs("#btnOpenAppearanceFromShelf");
-      const importModeHint = FB.qs("#importModeHint");
-      const importModeBadge = FB.qs("#importModeBadge");
-      const importNativeView = FB.qs("#importNativeView");
-      const importFallbackView = FB.qs("#importFallbackView");
-      const btnPickFiles = FB.qs("#btnPickFiles");
-      const btnDoFallbackImport = FB.qs("#btnDoFallbackImport");
-      const importResultMeta = FB.qs("#importResultMeta");
-      const importResultList = FB.qs("#importResultList");
+        function setState(state){
+          FB.qsa("[data-state]").forEach(el=>{
+            el.classList.toggle("is-active", el.getAttribute("data-state") === state);
+          });
+        }
 
-      let pendingBookId = null;
-      let pendingBookTitle = null;
-      let importInFlight = false;
+        function escapeHTML(s){
+          return String(s).replace(/[&<>"']/g, (c)=>({
+            "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+          }[c]));
+        }
 
-      function escapeHTML(s){
-        return String(s).replace(/[&<>"']/g, (c)=>({
-          "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-        }[c]));
-      }
+        function formatTime(ts){
+          try{
+            const d = new Date(ts);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth()+1).padStart(2,'0');
+            const dd = String(d.getDate()).padStart(2,'0');
+            return `${yyyy}-${mm}-${dd}`;
+          }catch(_e){ return "—"; }
+        }
 
-      function getActiveLibrary(){
-        const { libraries, activeLibraryId } = FB.data.getLibraries();
-        const id = activeLibId || activeLibraryId;
-        return libraries.find(l=>l.id===id) || libraries[0] || null;
-      }
+        async function loadLibraries(){
+          const res = await window.electronAPI.libraryList();
+          return res && res.success ? res.data : null;
+        }
 
-      function renderTopBar(){
-        const lib = getActiveLibrary();
-        activeLibId = lib?.id || null;
-        activeLibName.textContent = lib ? lib.name : "未选择";
-        const suffix = lib ? `当前书库：${lib.name}` : "未选择书库";
-        FB.qs("#barSubtitle").textContent = `v2.0 · 书架 · ${suffix}`;
-      }
+        async function ensureCurrentLibrary(){
+          const data = await loadLibraries();
+          if(!data) return null;
+          const fromUrl = p.get("libraryId");
+          const id = fromUrl || data.activeLibraryId || (data.libraries[0] ? data.libraries[0].id : null);
+          if(!id) return null;
+          const lib = (data.libraries||[]).find(l=>l.id===id) || null;
+          if(!lib || lib.invalidReason){
+            location.href = "./library-picker.html";
+            return null;
+          }
+          await window.electronAPI.librarySetActive(id);
+          currentLibId = id;
+          activeLibName.textContent = lib.name || "当前书库";
+          FB.qs("#barSubtitle").textContent = `v2.0 · 书架 · 当前书库：${lib.name || ""}`;
+          return { data, lib };
+        }
 
-      function renderLibModal(){
-        const { libraries, activeLibraryId } = FB.data.getLibraries();
-        libListModal.innerHTML = "";
-        libraries.forEach(lib=>{
-          const invalid = !!lib.invalidReason;
-          const item = document.createElement("div");
-          item.className = "item";
-          item.innerHTML = `
-            <div class="item-main">
-              <div class="item-title">${escapeHTML(lib.name)}
-                ${lib.id===activeLibraryId?` <span class="badge ok">当前</span>`:""}
-                ${invalid?` <span class="badge bad">路径失效</span>`:""}
+        async function loadBooks(){
+          if(!currentLibId) return null;
+          const res = await window.electronAPI.bookList(currentLibId);
+          if(!res || !res.success) return null;
+          currentBooks = res.books || [];
+          return currentBooks;
+        }
+
+        function renderBooks(){
+          const q = (search.value || "").trim().toLowerCase();
+          const filtered = (currentBooks||[]).filter(b=>{
+            const hay = `${b.displayTitle||""} ${b.filePath||""}`.toLowerCase();
+            return !q || hay.includes(q);
+          });
+
+          bookRows.innerHTML = "";
+          filtered.forEach(b=>{
+            const missing = !!b.missing;
+            const row = document.createElement("div");
+            row.className = "t-row";
+            row.setAttribute("role","row");
+            row.innerHTML = `
+              <div class="t-cell" role="cell">
+                <div class="t-title">${escapeHTML(b.displayTitle || "未命名")}</div>
+                <div class="t-meta">${escapeHTML(b.filePath || "")}</div>
               </div>
-              <div class="item-sub">${escapeHTML(lib.path)}</div>
-            </div>
-            <div class="item-actions">
-              <button class="btn ${invalid?"btn-danger":"btn-primary"}" type="button" data-switch-lib="${escapeHTML(lib.id)}">
-                ${invalid?"去处理":"切换"}
-              </button>
-            </div>
-          `;
-          libListModal.appendChild(item);
-        });
-      }
+              <div class="t-cell hide-xs" role="cell">
+                <div class="t-meta">${formatTime(b.fileStat?.mtimeMs)}</div>
+              </div>
+              <div class="t-cell" role="cell">
+                ${missing?`<span class="badge bad">文件缺失</span>`:`<span class="badge ok">可打开</span>`}
+              </div>
+              <div class="t-cell t-actions" role="cell">
+                <button class="btn ${missing?"btn-danger":"btn-primary"}" type="button" data-open="${escapeHTML(b.id)}">${missing?"修复…":"打开"}</button>
+                <button class="btn btn-ghost" type="button" data-more="${escapeHTML(b.id)}" aria-label="更多操作">⋯</button>
+              </div>
+            `;
+            bookRows.appendChild(row);
+          });
 
-      function renderContinueCard(){
-        const lib = getActiveLibrary();
-        if(!lib) return;
-        const booksDoc = FB.data.getBooks(lib.id);
-        const prog = FB.data.getProgress(lib.id);
-        const lastId = prog.lastReadBookId;
-        const book = booksDoc.books.find(b=>b.id===lastId);
-        if(!book){
+          setState(currentBooks.length ? "default" : "empty");
+        }
+
+        async function renderContinueCard(){
+          if(!currentLibId) return;
+          const pr = await window.electronAPI.progressDoc(currentLibId);
+          const doc = pr && pr.success ? pr.data : null;
+          const lastId = doc?.lastReadBookId || null;
+          const book = lastId ? (currentBooks||[]).find(b=>b.id===lastId) : null;
+          if(!book){
+            continueWrap.innerHTML = `
+              <div class="empty" style="padding:14px 12px;">
+                <h2>暂无可续读书本</h2>
+                <p>打开一本书后会自动出现在这里。</p>
+              </div>`;
+            return;
+          }
+          const ratio = (doc?.progressByBookId?.[book.id]?.scrollRatio ?? 0);
+          const pct = Math.round(ratio*100);
           continueWrap.innerHTML = `
-            <div class="empty" style="padding:14px 12px;">
-              <h2>暂无可续读书本</h2>
-              <p>打开一本书后会自动出现在这里。</p>
-            </div>`;
-          return;
-        }
-        const ratio = (prog.progressByBookId?.[book.id]?.scrollRatio ?? 0);
-        const pct = Math.round(ratio*100);
-        continueWrap.innerHTML = `
-          <div class="card" style="border-radius:14px; background: rgba(7,11,21,.34);">
-            <div class="card-hd" style="padding:12px 12px 10px 12px;">
-              <div style="min-width:0;">
-                <div class="card-title" style="font-size:13.5px;">${escapeHTML(book.displayTitle)}</div>
-                <div class="card-desc">进度 ${pct}% · ${escapeHTML(book.filePath)}</div>
+            <div class="card" style="border-radius:14px; background: rgba(7,11,21,.34);">
+              <div class="card-hd" style="padding:12px 12px 10px 12px;">
+                <div style="min-width:0;">
+                  <div class="card-title" style="font-size:13.5px;">${escapeHTML(book.displayTitle || "未命名")}</div>
+                  <div class="card-desc">进度 ${pct}% · ${escapeHTML(book.filePath || "")}</div>
+                </div>
+                <span class="badge ok">最近</span>
               </div>
-              <span class="badge ok">最近</span>
-            </div>
-            <div class="card-bd" style="padding:0 12px 12px 12px;">
-              <button class="btn btn-primary" type="button" id="btnContinue">继续</button>
-            </div>
-          </div>
-        `;
-        const btn = FB.qs("#btnContinue");
-        btn?.addEventListener("click", ()=> openBook(book.id));
-      }
-
-      function renderBooks(){
-        const lib = getActiveLibrary();
-        if(!lib) return;
-        const doc = FB.data.getBooks(lib.id);
-        const q = (search.value || "").trim().toLowerCase();
-        const filtered = doc.books.filter(b=>{
-          const hay = `${b.displayTitle} ${b.filePath}`.toLowerCase();
-          return !q || hay.includes(q);
-        });
-
-        bookRows.innerHTML = "";
-        filtered.forEach(b=>{
-          const missing = !!b.missing;
-          const row = document.createElement("div");
-          row.className = "t-row";
-          row.setAttribute("role","row");
-          row.innerHTML = `
-            <div class="t-cell" role="cell">
-              <div class="t-title">${escapeHTML(b.displayTitle)}</div>
-              <div class="t-meta">${escapeHTML(b.filePath)}</div>
-            </div>
-            <div class="t-cell hide-xs" role="cell">
-              <div class="t-meta">${FB.formatTime(b.fileStat?.mtimeMs)}</div>
-            </div>
-            <div class="t-cell" role="cell">
-              ${missing?`<span class="badge bad">文件缺失</span>`:`<span class="badge ok">可打开</span>`}
-            </div>
-            <div class="t-cell t-actions" role="cell">
-              <button class="btn ${missing?"btn-danger":"btn-primary"}" type="button" data-open="${escapeHTML(b.id)}">${missing?"修复…":"打开"}</button>
-              <button class="btn btn-ghost" type="button" data-more="${escapeHTML(b.id)}" aria-label="更多操作">⋯</button>
+              <div class="card-bd" style="padding:0 12px 12px 12px;">
+                <button class="btn btn-primary" type="button" id="btnContinue">继续</button>
+              </div>
             </div>
           `;
-          bookRows.appendChild(row);
-        });
-
-        if(!doc.books.length){
-          FB.setParam("state", "empty");
-          FB.applyState();
-        }
-      }
-
-      function openBook(bookId){
-        const lib = getActiveLibrary();
-        if(!lib) return;
-        const doc = FB.data.getBooks(lib.id);
-        const b = doc.books.find(x=>x.id===bookId);
-        if(!b) return;
-        if(b.missing){
-          pendingBookId = b.id;
-          pendingBookTitle = b.displayTitle;
-          FB.qs("#missingPath").textContent = b.filePath;
-          FB.openModal("mMissing");
-          return;
-        }
-        // mark openedAt
-        b.lastOpenedAt = Date.now();
-        localStorage.setItem(`fb_v2_books_${lib.id}`, JSON.stringify(doc));
-        location.href = `./reader.html?libraryId=${encodeURIComponent(lib.id)}&bookId=${encodeURIComponent(b.id)}`;
-      }
-
-      // wiring
-      FB.qs("#btnLibSwitcher").addEventListener("click", ()=>{
-        renderLibModal();
-        FB.openModal("mLibs");
-      });
-      libListModal.addEventListener("click", (e)=>{
-        const btn = e.target.closest("[data-switch-lib]");
-        if(!btn) return;
-        const id = btn.getAttribute("data-switch-lib");
-        const { libraries } = FB.data.getLibraries();
-        const lib = libraries.find(l=>l.id===id);
-        if(lib?.invalidReason){
-          FB.closeModal("mLibs");
-          location.href = "./library-picker.html?state=default";
-          return;
-        }
-        FB.data.setActiveLibrary(id);
-        activeLibId = id;
-        FB.closeModal("mLibs");
-        FB.toast("已切换书库", lib?.name || id);
-        renderTopBar();
-        renderContinueCard();
-        renderBooks();
-      });
-
-      // import
-      function setImportView(mode){
-        const isNative = mode === "native";
-        importNativeView?.classList.toggle("is-active", isNative);
-        importFallbackView?.classList.toggle("is-active", !isNative);
-        btnPickFiles.style.display = isNative ? "" : "none";
-        btnDoFallbackImport.style.display = isNative ? "none" : "";
-      }
-
-      function clearImportResult(){
-        importResultMeta.textContent = "尚未导入。";
-        importResultList.innerHTML = "";
-      }
-
-      function renderImportResult(res){
-        const added = res?.added || [];
-        const dup = res?.dup || [];
-        const failed = res?.failed || [];
-        const total = added.length + dup.length + failed.length;
-
-        if(total === 0){
-          importResultMeta.textContent = "未选择文件或已取消。";
-          importResultList.innerHTML = "";
-          return;
+          FB.qs("#btnContinue")?.addEventListener("click", ()=> openBook(book.id));
         }
 
-        importResultMeta.textContent = `新增 ${added.length} · 跳过重复 ${dup.length} · 失败 ${failed.length}`;
-
-        const rows = [];
-        added.forEach(x=> rows.push({ kind:"added", displayTitle: x.displayTitle, filePath: x.filePath }));
-        dup.forEach(x=> rows.push({ kind:"dup", displayTitle: x.displayTitle, filePath: x.filePath }));
-        failed.forEach(x=> rows.push({ kind:"failed", displayTitle: x.displayTitle, filePath: x.filePath, reason: x.reason }));
-
-        importResultList.innerHTML = "";
-        rows.forEach(r=>{
-          const item = document.createElement("div");
-          item.className = "item";
-          const badge = (r.kind === "added")
-            ? `<span class="badge ok">新增</span>`
-            : (r.kind === "dup")
-              ? `<span class="badge warn">跳过</span>`
-              : `<span class="badge bad">失败</span>`;
-          const sub = (r.kind === "failed" && (!r.filePath))
-            ? (r.reason || "导入失败")
-            : (r.filePath || r.reason || "—");
-          item.innerHTML = `
-            <div class="item-main">
-              <div class="item-title">${escapeHTML(r.displayTitle || "未命名")}</div>
-              <div class="item-sub">${escapeHTML(sub)}</div>
-            </div>
-            <div class="item-actions">${badge}</div>
-          `;
-          importResultList.appendChild(item);
-        });
-
-        if(added.length) FB.toast("导入完成", `新增 ${added.length} 本`);
-        if(dup.length) FB.toast("去重跳过", `跳过 ${dup.length} 本`);
-        if(failed.length) FB.toast("存在失败", `失败 ${failed.length} 条`);
-
-        FB.setParam("state", "default");
-        FB.applyState();
-        renderContinueCard();
-        renderBooks();
-      }
-
-      function openImportModal({ autoPick=false } = {}){
-        const lib = getActiveLibrary();
-        if(!lib) return;
-
-        clearImportResult();
-
-        const canNativePick = !!(window.electronAPI && typeof window.electronAPI.bookImportFiles === "function");
-        if(canNativePick){
-          importModeHint.textContent = "检测到 Electron 环境：将调用系统文件选择器（支持多选）";
-          importModeBadge.textContent = "系统";
-          setImportView("native");
-        }else{
-          importModeHint.textContent = "未检测到 Electron：使用演示列表作为 fallback（不调用系统文件选择器）";
-          importModeBadge.textContent = "演示";
-          setImportView("fallback");
-        }
-
-        FB.openModal("mImport");
-
-        if(canNativePick && autoPick){
-          // small delay to avoid focus-stealing issues in some environments
-          setTimeout(()=> startNativePick(), 80);
-        }
-      }
-
-      async function startNativePick(){
-        const lib = getActiveLibrary();
-        if(!lib) return;
-        if(importInFlight) return;
-        if(typeof FB.nativeImportBooks !== "function"){
-          importResultMeta.textContent = "未实现 nativeImportBooks（原型运行时缺失）。";
-          return;
-        }
-
-        importInFlight = true;
-        btnPickFiles.disabled = true;
-        const oldText = btnPickFiles.textContent;
-        btnPickFiles.textContent = "等待选择…";
-        importResultMeta.textContent = "正在打开系统文件选择器…";
-
-        const res = await FB.nativeImportBooks(lib.id);
-
-        btnPickFiles.disabled = false;
-        btnPickFiles.textContent = oldText === "选择文件…" ? "再次选择…" : oldText;
-        importInFlight = false;
-
-        if(res === null){
-          importResultMeta.textContent = "当前环境不支持系统文件选择器（fallback 仅用于展示）。";
-          return;
-        }
-        renderImportResult(res);
-      }
-
-      FB.qs("#btnImport").addEventListener("click", ()=> openImportModal({ autoPick:true }));
-      FB.qsa("[data-open-import]").forEach(b=> b.addEventListener("click", ()=> openImportModal({ autoPick:true })));
-      btnPickFiles.addEventListener("click", ()=> startNativePick());
-      btnDoFallbackImport.addEventListener("click", ()=>{
-        const lib = getActiveLibrary();
-        if(!lib) return;
-        const checks = FB.qsa("[data-import-item]");
-        const chosen = checks.filter(c=>c.checked);
-
-        const failed = chosen
-          .filter(c=>c.getAttribute("data-sim-fail") === "1")
-          .map(c=>({
-            displayTitle: c.getAttribute("data-title") || "未命名",
-            filePath: c.getAttribute("data-path") || "",
-            reason: "权限不足或文件被占用（演示）"
-          }));
-
-        const files = chosen
-          .filter(c=>c.getAttribute("data-sim-fail") !== "1")
-          .map(c=>({
-            displayTitle: c.getAttribute("data-title"),
-            filePath: c.getAttribute("data-path"),
-            size: 400000,
-            mtimeMs: Date.now() - 1000*60*60*24*Math.floor(Math.random()*30)
-          }));
-
-        const { added, dup } = FB.data.importBooks(lib.id, files);
-        renderImportResult({
-          added: added.map(b=>({ displayTitle:b.displayTitle, filePath:b.filePath })),
-          dup: dup.map(d=>({ displayTitle:d.displayTitle || d.title || "重复条目", filePath:d.filePath })),
-          failed,
-        });
-      });
-
-      // open/more actions
-      bookRows.addEventListener("click", (e)=>{
-        const openBtn = e.target.closest("[data-open]");
-        const moreBtn = e.target.closest("[data-more]");
-        if(openBtn){
-          openBook(openBtn.getAttribute("data-open"));
-        }
-        if(moreBtn){
-          const id = moreBtn.getAttribute("data-more");
-          const lib = getActiveLibrary();
-          const doc = FB.data.getBooks(lib.id);
-          const b = doc.books.find(x=>x.id===id);
+        function openBook(bookId){
+          const b = (currentBooks||[]).find(x=>x.id===bookId);
           if(!b) return;
-          pendingBookId = b.id;
-          pendingBookTitle = b.displayTitle;
-          FB.qs("#actionsTitle").textContent = `${b.displayTitle} · ${b.filePath}`;
-          FB.openModal("mActions");
+          if(b.missing){
+            pendingBookId = b.id;
+            pendingBookTitle = b.displayTitle || "";
+            FB.qs("#missingPath").textContent = b.filePath || "";
+            FB.openModal("mMissing");
+            return;
+          }
+          location.href = `./reader.html?libraryId=${encodeURIComponent(currentLibId)}&bookId=${encodeURIComponent(b.id)}`;
         }
-      });
 
-      // missing repair flow
-      FB.qs("#btnRelink").addEventListener("click", ()=>{
-        const lib = getActiveLibrary();
-        if(!lib || !pendingBookId) return;
-        const newPath = `D:\\\\Books\\\\Recovered\\\\${pendingBookTitle || "book"}.txt`;
-        FB.data.relinkBook(lib.id, pendingBookId, newPath);
-        FB.closeModal("mMissing");
-        FB.toast("已重新定位文件", "保留原进度");
+        function renderImportResult(res){
+          const added = res?.added || [];
+          const dup = res?.dup || [];
+          const failed = res?.failed || [];
+          importResultMeta.textContent = `新增 ${added.length} · 跳过重复 ${dup.length} · 失败 ${failed.length}`;
+          importResultList.innerHTML = "";
+
+          function addItem(kind, title, sub){
+            const item = document.createElement("div");
+            item.className = "item";
+            item.innerHTML = `
+              <div class="item-main">
+                <div class="item-title">${escapeHTML(title)}</div>
+                <div class="item-sub">${escapeHTML(sub || "")}</div>
+              </div>
+              <div class="item-actions">
+                <span class="badge ${kind === "ok" ? "ok" : kind === "dup" ? "warn" : "bad"}">${kind === "ok" ? "新增" : kind === "dup" ? "重复" : "失败"}</span>
+              </div>
+            `;
+            importResultList.appendChild(item);
+          }
+
+          added.forEach(x=> addItem("ok", x.displayTitle || "未命名", x.filePath || ""));
+          dup.forEach(x=> addItem("dup", x.displayTitle || "重复条目", x.filePath || ""));
+          failed.forEach(x=> addItem("bad", x.displayTitle || "导入失败", (x.filePath||"") + (x.reason ? ` · ${x.reason}` : "")));
+        }
+
+        async function startImport(){
+          if(!currentLibId) return;
+          if(importInFlight) return;
+          importInFlight = true;
+          btnPickFiles.disabled = true;
+          const oldText = btnPickFiles.textContent;
+          btnPickFiles.textContent = "等待选择…";
+          importResultMeta.textContent = "正在打开系统文件选择器…";
+          importResultList.innerHTML = "";
+
+          const res = await window.electronAPI.bookImportFiles(currentLibId);
+          btnPickFiles.disabled = false;
+          btnPickFiles.textContent = oldText;
+          importInFlight = false;
+          if(!res || !res.success){
+            importResultMeta.textContent = res?.canceled ? "已取消选择。" : "导入失败。";
+            return;
+          }
+          renderImportResult(res);
+          await loadBooks();
+          renderBooks();
+          await renderContinueCard();
+        }
+
+        FB.qs("#btnImport").addEventListener("click", ()=>{
+          FB.openModal("mImport");
+          setTimeout(()=> startImport(), 60);
+        });
+        FB.qsa("[data-open-import]").forEach(b=> b.addEventListener("click", ()=>{
+          FB.openModal("mImport");
+          setTimeout(()=> startImport(), 60);
+        }));
+        btnPickFiles.addEventListener("click", startImport);
+        btnDoFallbackImport.addEventListener("click", startImport);
+
+        FB.qs("#btnLibSwitcher").addEventListener("click", async ()=>{
+          const data = await loadLibraries();
+          if(!data) return;
+          libListModal.innerHTML = "";
+          (data.libraries||[]).forEach(lib=>{
+            const invalid = !!lib.invalidReason;
+            const item = document.createElement("div");
+            item.className = "item";
+            item.innerHTML = `
+              <div class="item-main">
+                <div class="item-title">${escapeHTML(lib.name || "")}
+                  ${lib.id===data.activeLibraryId?` <span class="badge ok">当前</span>`:""}
+                  ${invalid?` <span class="badge bad">路径失效</span>`:""}
+                </div>
+                <div class="item-sub">${escapeHTML(lib.path || "")}</div>
+              </div>
+              <div class="item-actions">
+                <button class="btn ${invalid?"btn-danger":"btn-primary"}" type="button" data-switch-lib="${escapeHTML(lib.id)}">
+                  ${invalid?"去处理":"切换"}
+                </button>
+              </div>
+            `;
+            libListModal.appendChild(item);
+          });
+          FB.openModal("mLibs");
+        });
+
+        libListModal.addEventListener("click", async (e)=>{
+          const btn = e.target.closest("[data-switch-lib]");
+          if(!btn) return;
+          const id = btn.getAttribute("data-switch-lib");
+          const data = await loadLibraries();
+          const lib = (data?.libraries||[]).find(l=>l.id===id);
+          if(!lib || lib.invalidReason){
+            FB.closeModal("mLibs");
+            location.href = "./library-picker.html";
+            return;
+          }
+          await window.electronAPI.librarySetActive(id);
+          FB.closeModal("mLibs");
+          currentLibId = id;
+          activeLibName.textContent = lib.name || "当前书库";
+          FB.qs("#barSubtitle").textContent = `v2.0 · 书架 · 当前书库：${lib.name || ""}`;
+          await loadBooks();
+          renderBooks();
+          await renderContinueCard();
+        });
+
+        bookRows.addEventListener("click", (e)=>{
+          const openBtn = e.target.closest("[data-open]");
+          const moreBtn = e.target.closest("[data-more]");
+          if(openBtn) openBook(openBtn.getAttribute("data-open"));
+          if(moreBtn){
+            const id = moreBtn.getAttribute("data-more");
+            const b = (currentBooks||[]).find(x=>x.id===id);
+            if(!b) return;
+            pendingBookId = b.id;
+            pendingBookTitle = b.displayTitle || "";
+            FB.qs("#actionsTitle").textContent = `${b.displayTitle || "未命名"} · ${b.filePath || ""}`;
+            FB.openModal("mActions");
+          }
+        });
+
+        FB.qs("#btnRelink").addEventListener("click", async ()=>{
+          if(!currentLibId || !pendingBookId) return;
+          await window.electronAPI.bookRelinkFile(currentLibId, pendingBookId);
+          FB.closeModal("mMissing");
+          await loadBooks();
+          renderBooks();
+        });
+        FB.qs("#btnRemoveBook").addEventListener("click", async ()=>{
+          if(!currentLibId || !pendingBookId) return;
+          await window.electronAPI.bookRemove(currentLibId, pendingBookId);
+          FB.closeModal("mMissing");
+          await loadBooks();
+          renderBooks();
+          await renderContinueCard();
+        });
+
+        FB.qs("#btnRemoveFromActions").addEventListener("click", async ()=>{
+          if(!currentLibId || !pendingBookId) return;
+          await window.electronAPI.bookRemove(currentLibId, pendingBookId);
+          FB.closeModal("mActions");
+          await loadBooks();
+          renderBooks();
+          await renderContinueCard();
+        });
+        FB.qs("#btnRename").addEventListener("click", async ()=>{
+          if(!currentLibId || !pendingBookId) return;
+          const name = prompt("输入新的显示名（不改文件名）", pendingBookTitle || "");
+          if(!name) return;
+          await window.electronAPI.bookRename(currentLibId, pendingBookId, name);
+          await loadBooks();
+          renderBooks();
+          await renderContinueCard();
+        });
+
+        FB.qs("#btnReveal").addEventListener("click", ()=>{
+          try{
+            const b = (currentBooks||[]).find(x=>x.id===pendingBookId);
+            if(b?.filePath) navigator.clipboard?.writeText(b.filePath);
+          }catch(_e){}
+        });
+
+        FB.qs("#btnSettings").addEventListener("click", async ()=>{
+          const s = await window.electronAPI.settingsGet();
+          autoOpen2.checked = !!s?.data?.autoOpenLastLibrary;
+          FB.openModal("mSettings");
+        });
+        autoOpen2.addEventListener("change", async ()=>{
+          await window.electronAPI.settingsUpdate({ autoOpenLastLibrary: autoOpen2.checked });
+        });
+        btnOpenAppearanceFromShelf.addEventListener("click", ()=>{
+          const qsParts = [
+            `open=appearance`,
+            currentLibId ? `libraryId=${encodeURIComponent(currentLibId)}` : null,
+          ].filter(Boolean);
+          location.href = `./reader.html?${qsParts.join("&")}`;
+        });
+
+        setState("loading");
+        const ok = await ensureCurrentLibrary();
+        if(!ok){
+          setState("error");
+          return;
+        }
+        await loadBooks();
         renderBooks();
-      });
-      FB.qs("#btnRemoveBook").addEventListener("click", ()=>{
-        const lib = getActiveLibrary();
-        if(!lib || !pendingBookId) return;
-        FB.data.removeBook(lib.id, pendingBookId);
-        FB.closeModal("mMissing");
-        FB.toast("已从书库移除", "同时清理进度");
-        renderContinueCard();
-        renderBooks();
-      });
-
-      // actions modal
-      FB.qs("#btnReveal").addEventListener("click", ()=>{
-        FB.toast("已复制路径（演示）", pendingBookTitle || "");
-      });
-      FB.qs("#btnRemoveFromActions").addEventListener("click", ()=>{
-        const lib = getActiveLibrary();
-        if(!lib || !pendingBookId) return;
-        FB.data.removeBook(lib.id, pendingBookId);
-        FB.closeModal("mActions");
-        FB.toast("已移除书本", "同时清理进度");
-        renderContinueCard();
-        renderBooks();
-      });
-      FB.qs("#btnRename").addEventListener("click", ()=>{
-        const lib = getActiveLibrary();
-        if(!lib || !pendingBookId) return;
-        const name = prompt("输入新的显示名（不改文件名）", pendingBookTitle || "");
-        if(!name) return;
-        const doc = FB.data.getBooks(lib.id);
-        const b = doc.books.find(x=>x.id===pendingBookId);
-        if(!b) return;
-        b.displayTitle = name;
-        localStorage.setItem(`fb_v2_books_${lib.id}`, JSON.stringify(doc));
-        FB.toast("已重命名显示名", name);
-        renderContinueCard();
-        renderBooks();
-      });
-
-      // settings modal
-      FB.qs("#btnSettings").addEventListener("click", ()=>{
-        autoOpen2.checked = !!FB.data.getLibraries().settings.autoOpenLastLibrary;
-        FB.openModal("mSettings");
-      });
-      autoOpen2.addEventListener("change", ()=>{
-        FB.data.setAutoOpen(autoOpen2.checked);
-        FB.toast("已更新设置", autoOpen2.checked ? "自动打开上次书库：开" : "自动打开上次书库：关");
-      });
-      btnOpenAppearanceFromShelf?.addEventListener("click", ()=>{
-        const debug = (FB.parseParams().get("debug") === "1");
-        const lib = getActiveLibrary();
-        const qsParts = [
-          `state=empty`,
-          `open=appearance`,
-          lib?.id ? `libraryId=${encodeURIComponent(lib.id)}` : null,
-          debug ? `debug=1` : null,
-        ].filter(Boolean);
-        location.href = `./reader.html?${qsParts.join("&")}`;
-      });
-
-      // search
-      search.addEventListener("input", ()=> renderBooks());
-
-      // error state recovery (demo)
-      FB.qs("#btnResetBooks")?.addEventListener("click", ()=>{
-        localStorage.removeItem("fb_v2_libraries");
-        Object.keys(localStorage).filter(k=>k.startsWith("fb_v2_books_")||k.startsWith("fb_v2_progress_")).forEach(k=>localStorage.removeItem(k));
-        location.href = "./bookshelf.html";
-      });
-
-      // initial render for non-loading views
-      renderTopBar();
-      if(state === "default"){
-        renderContinueCard();
-        renderBooks();
-      }
-      if(state === "empty"){
-        renderContinueCard();
-      }
+        await renderContinueCard();
+      })();
     </script>
   </body>
 </html>

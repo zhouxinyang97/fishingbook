@@ -1,0 +1,379 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
+
+body {
+    background-color: transparent; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+}
+
+#app-window {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* width/height controlled by electron window size, so we fill 100% */
+    width: 100%;
+    height: 100%;
+    background-color: rgba(30, 30, 30, 0.95);
+    color: #d4d4d4;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    border: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    transition: background-color 0.2s ease;
+    /* Border radius only if not maximized - handling in JS or CSS class? 
+       Electron frameless window usually has square corners unless we style body.
+       Let's keep it simple. */
+    border-radius: 4px; 
+    box-sizing: border-box;
+}
+
+.window-header {
+    height: 35px;
+    background-color: rgba(37, 37, 38, 0.8);
+    display: flex;
+    align-items: center;
+    padding: 0 0 0 10px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(0,0,0,0.2);
+    cursor: default;
+    justify-content: space-between;
+    user-select: none;
+    -webkit-app-region: drag;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.tab-active {
+    background-color: rgba(30, 30, 30, 0.5);
+    padding: 0 12px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    border-top: 1px solid #007acc;
+    color: #ffffff;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    -webkit-app-region: no-drag;
+}
+
+/* Library Button Styling */
+.library-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #858585;
+    padding: 4px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: 'Fira Code', monospace;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 10px;
+    outline: none;
+}
+
+.library-btn:hover {
+    color: #d4d4d4;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.library-btn.active {
+    color: #fff;
+    border-color: #333;
+    background-color: #252526;
+}
+
+/* Window Controls */
+.window-controls {
+    display: flex;
+    height: 100%;
+}
+
+.control-btn {
+    background: transparent;
+    border: none;
+    color: #858585;
+    width: 46px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.1s;
+    outline: none;
+}
+
+.control-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.control-btn.close-btn:hover {
+    background-color: #e81123;
+    color: #ffffff;
+    border-top-right-radius: 4px;
+}
+
+#pin-btn.active {
+    color: #007acc;
+}
+
+#content-area {
+    flex: 1;
+    padding: 10px 20px;
+    overflow-y: auto;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    scrollbar-width: thin;
+    scrollbar-color: #424242 transparent;
+}
+
+#content-area::-webkit-scrollbar {
+    width: 10px;
+}
+#content-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+#content-area::-webkit-scrollbar-thumb {
+    background-color: #424242;
+    border-radius: 20px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+/* Syntax Highlighting Simulation */
+.log-time { color: #569cd6; }
+.log-info { color: #4ec9b0; }
+.log-text { color: #ce9178; }
+.comment { color: #6a9955; }
+.keyword { color: #c586c0; }
+.string { color: #ce9178; }
+.number { color: #b5cea8; }
+.error  { color: #f44747; }
+
+/* Library List Styling */
+.book-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 10px;
+}
+
+.book-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    color: #d4d4d4;
+    transition: background-color 0.1s;
+    font-family: 'Fira Code', monospace;
+}
+
+.book-item:hover {
+    background-color: #2a2d2e;
+}
+
+.book-id { 
+    color: #569cd6; 
+    margin-right: 15px; 
+    width: 60px; 
+    text-align: right; 
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.book-name { flex: 1; color: #9cdcfe; font-weight: 500; }
+.book-progress { color: #6a9955; font-size: 0.9em; margin-left: 10px; }
+.book-delete { 
+    color: #f44747; 
+    opacity: 0; 
+    margin-left: 15px; 
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+.book-item:hover .book-delete { opacity: 0.6; }
+.book-delete:hover { opacity: 1; background: rgba(244, 71, 71, 0.2); }
+
+.add-book-row {
+    margin-top: 20px;
+    padding: 10px;
+    cursor: pointer;
+    color: #858585;
+    border: 1px dashed #444;
+    text-align: center;
+    border-radius: 4px;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+.add-book-row:hover {
+    border-color: #007acc;
+    color: #d4d4d4;
+    background-color: rgba(0, 122, 204, 0.1);
+}
+
+.empty-state {
+    text-align: center;
+    color: #6a9955;
+    margin-top: 50px;
+    font-style: italic;
+}
+
+/* Resize Handles */
+.resize-handle {
+    position: absolute;
+    z-index: 50;
+    background: transparent;
+}
+
+.resize-top {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    cursor: n-resize;
+}
+
+.resize-bottom {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    cursor: s-resize;
+}
+
+.resize-left {
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    cursor: w-resize;
+}
+
+.resize-right {
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    cursor: e-resize;
+}
+
+.resize-corner-br {
+    bottom: 0;
+    right: 0;
+    width: 15px;
+    height: 15px;
+    cursor: se-resize;
+    z-index: 51; /* Higher than edges */
+}
+
+.resize-corner-tl {
+    top: 0;
+    left: 0;
+    width: 15px;
+    height: 15px;
+    cursor: nw-resize;
+    z-index: 51;
+}
+
+.resize-corner-tr {
+    top: 0;
+    right: 0;
+    width: 15px;
+    height: 15px;
+    cursor: ne-resize;
+    z-index: 51;
+}
+
+.resize-corner-bl {
+    bottom: 0;
+    left: 0;
+    width: 15px;
+    height: 15px;
+    cursor: sw-resize;
+    z-index: 51;
+}
+
+/* Resize Overlay */
+#resize-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    background-color: transparent; 
+    cursor: se-resize;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Controls Overlay */
+.controls-area {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px;
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.3s;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    z-index: 10;
+}
+
+#app-window:hover .controls-area {
+    opacity: 1;
+}
+
+input[type=range] {
+    -webkit-appearance: none;
+    width: 100px;
+    background: transparent;
+}
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 14px;
+    width: 14px;
+    border-radius: 50%;
+    background: #007acc;
+    cursor: pointer;
+    margin-top: -5px; 
+}
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: #424242;
+    border-radius: 2px;
+}
