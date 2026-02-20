@@ -21,7 +21,6 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    /* width/height controlled by electron window size, so we fill 100% */
     width: 100%;
     height: 100%;
     background-color: rgba(30, 30, 30, 0.95);
@@ -31,9 +30,6 @@ body {
     display: flex;
     flex-direction: column;
     transition: background-color 0.2s ease;
-    /* Border radius only if not maximized - handling in JS or CSS class? 
-       Electron frameless window usually has square corners unless we style body.
-       Let's keep it simple. */
     border-radius: 4px; 
     box-sizing: border-box;
 }
@@ -146,6 +142,103 @@ body {
     color: #007acc;
 }
 
+/* Settings Button */
+#settings-btn.active {
+    color: #d4d4d4;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Settings Panel */
+.settings-panel {
+    position: absolute;
+    top: 36px;
+    right: 150px; /* Aligned roughly under settings button */
+    width: 200px;
+    background-color: #252526;
+    border: 1px solid #454545;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    padding: 10px;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.settings-panel.hidden {
+    display: none !important;
+}
+
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.setting-label {
+    font-size: 11px;
+    color: #cccccc;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+}
+
+.setting-value {
+    color: #007acc;
+}
+
+/* Color Options */
+.color-options {
+    display: flex;
+    gap: 8px;
+    margin-top: 5px;
+    align-items: center;
+}
+
+.color-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid #555;
+    cursor: pointer;
+    transition: transform 0.1s;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.color-circle:hover {
+    transform: scale(1.1);
+    border-color: #fff;
+}
+
+.color-circle.active {
+    border: 2px solid #007acc;
+    transform: scale(1.1);
+}
+
+.custom-color-trigger {
+    background-color: transparent;
+    border: 1px dashed #666;
+    color: #888;
+}
+
+.custom-color-trigger:hover {
+    border-color: #d4d4d4;
+    color: #d4d4d4;
+}
+
+.hidden-color-input {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    padding: 0;
+    border: none;
+}
+
 #content-area {
     flex: 1;
     padding: 10px 20px;
@@ -174,7 +267,7 @@ body {
 /* Syntax Highlighting Simulation */
 .log-time { color: #569cd6; }
 .log-info { color: #4ec9b0; }
-.log-text { color: inherit; } /* Use inherit to follow parent color */
+.log-text { color: #ce9178; }
 .comment { color: #6a9955; }
 .keyword { color: #c586c0; }
 .string { color: #ce9178; }
@@ -360,123 +453,6 @@ body {
 
 #app-window:hover .controls-area {
     opacity: 1;
-}
-
-/* Settings Button */
-#settings-btn.active {
-    color: #d4d4d4;
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Settings Panel */
-.settings-panel {
-    position: absolute;
-    top: 36px;
-    right: 150px; /* Aligned roughly under settings button */
-    width: 200px;
-    background-color: #252526;
-    border: 1px solid #454545;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    z-index: 100;
-    padding: 10px;
-    border-radius: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.settings-panel.hidden {
-    display: none !important;
-}
-
-.setting-item {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.setting-label {
-    font-size: 11px;
-    color: #cccccc;
-    font-weight: 600;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.setting-input {
-    background: transparent;
-    border: 1px solid #454545;
-    color: #007acc;
-    width: 40px;
-    font-size: 11px;
-    text-align: right;
-    padding: 2px;
-    border-radius: 2px;
-}
-
-.setting-input:focus {
-    outline: none;
-    border-color: #007acc;
-}
-
-/* Chrome/Safari - hide spinner */
-.setting-input::-webkit-inner-spin-button, 
-.setting-input::-webkit-outer-spin-button { 
-  -webkit-appearance: none; 
-  margin: 0; 
-}
-
-/* Color Options */
-.color-options {
-    display: flex;
-    gap: 8px;
-    margin-top: 5px;
-    align-items: center;
-}
-
-.color-circle {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 1px solid #555;
-    cursor: pointer;
-    transition: transform 0.1s;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.color-circle:hover {
-    transform: scale(1.1);
-    border-color: #fff;
-}
-
-.color-circle.active {
-    border: 2px solid #007acc;
-    transform: scale(1.1);
-}
-
-.custom-color-trigger {
-    background-color: transparent;
-    border: 1px dashed #666;
-    color: #888;
-}
-
-.custom-color-trigger:hover {
-    border-color: #d4d4d4;
-    color: #d4d4d4;
-}
-
-.hidden-color-input {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-    padding: 0;
-    border: none;
 }
 
 input[type=range] {

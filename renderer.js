@@ -17,13 +17,15 @@ let appState = {
     books: [],
     currentBookId: null,
     isMaximized: false,
-    isPinned: false
+    isPinned: false,
+    fontSize: 14,
+    fontColor: '#d4d4d4'
 };
 
 // Default Content
 const defaultBookHtml = `
     <span class="comment">// Application Startup Sequence initiated...</span><br>
-    <span class="log-time">[SYSTEM]</span> <span class="log-info">INFO</span>  <span class="log-text">Welcome to Fishing Book v2.1</span><br>
+    <span class="log-time">[SYSTEM]</span> <span class="log-info">INFO</span>  <span class="log-text">Welcome to Fishing Book v2.1.1</span><br>
     <span class="comment">// --------------------------------------------------</span><br>
     <span class="comment">// Please add a book from the Library.</span><br>
     <span class="comment">// --------------------------------------------------</span><br>
@@ -38,6 +40,8 @@ async function init() {
             appState.books = res.data.books || [];
             appState.currentBookId = res.data.currentBookId || null;
             appState.isPinned = res.data.isPinned || false;
+            appState.fontSize = res.data.fontSize || 14;
+            appState.fontColor = res.data.fontColor || '#d4d4d4';
         }
     } catch (e) {
         console.error('Failed to load data', e);
@@ -49,6 +53,9 @@ async function init() {
         pinBtn.classList.add('active');
         updatePinIcon(true);
     }
+
+    // Apply Font Settings
+    updateFontSettings();
 
     // Restore Window Size if saved (Optional)
     // if (res.data.windowBounds) window.api.windowControl.resize(res.data.windowBounds);
@@ -69,7 +76,9 @@ async function saveData() {
     await window.api.data.save({
         books: appState.books,
         currentBookId: appState.currentBookId,
-        isPinned: appState.isPinned
+        isPinned: appState.isPinned,
+        fontSize: appState.fontSize,
+        fontColor: appState.fontColor
     });
 }
 
@@ -354,7 +363,9 @@ saveData = async function() {
     await window.api.data.save({
         books: booksToSave,
         currentBookId: appState.currentBookId,
-        isPinned: appState.isPinned
+        isPinned: appState.isPinned,
+        fontSize: appState.fontSize,
+        fontColor: appState.fontColor
     });
 }
 
@@ -367,6 +378,118 @@ window.deleteBook = function(id, event) {
         }
         saveData();
         render();
+    }
+}
+
+const settingsBtn = document.getElementById('settings-btn');
+const settingsPanel = document.getElementById('settings-panel');
+const fontSizeSlider = document.getElementById('font-size-slider');
+const fontSizeInput = document.getElementById('font-size-input');
+// Use class selector to get specific elements if IDs are not unique or if we want to select by class
+// But wait, color-circle are multiple.
+// Let's re-select them inside the setup function or use global selector.
+const colorCircles = document.querySelectorAll('.color-circle:not(.custom-color-trigger)');
+const customColorPicker = document.getElementById('custom-color-picker');
+const customColorTrigger = document.querySelector('.custom-color-trigger');
+
+if (settingsBtn) {
+    settingsBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent document click from closing immediately
+        settingsPanel.classList.toggle('hidden');
+        settingsBtn.classList.toggle('active');
+    });
+}
+
+// Close settings when clicking outside
+document.addEventListener('click', (e) => {
+    if (settingsBtn && settingsPanel && 
+        !settingsBtn.contains(e.target) && 
+        !settingsPanel.contains(e.target)) {
+        settingsPanel.classList.add('hidden');
+        settingsBtn.classList.remove('active');
+    }
+});
+
+if (fontSizeSlider) {
+    fontSizeSlider.addEventListener('input', (e) => {
+        appState.fontSize = parseInt(e.target.value);
+        updateFontSettings();
+        saveData();
+    });
+}
+
+if (fontSizeInput) {
+    fontSizeInput.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        if (!isNaN(val)) {
+            appState.fontSize = val;
+            updateFontSettings(false); // Pass false to avoid updating input while typing
+            saveData();
+        }
+    });
+    
+    // Validate on blur
+    fontSizeInput.addEventListener('blur', () => {
+        if (appState.fontSize < 8) appState.fontSize = 8;
+        if (appState.fontSize > 128) appState.fontSize = 128;
+        updateFontSettings();
+        saveData();
+    });
+}
+
+colorCircles.forEach(circle => {
+    circle.addEventListener('click', (e) => {
+        const color = e.target.dataset.color;
+        appState.fontColor = color;
+        updateFontSettings();
+        saveData();
+    });
+});
+
+if (customColorPicker) {
+    // 'input' fires while dragging, 'change' fires on close. 'input' is better for live preview.
+    customColorPicker.addEventListener('input', (e) => {
+        appState.fontColor = e.target.value;
+        updateFontSettings();
+        saveData();
+    });
+}
+
+function updateFontSettings(updateInput = true) {
+    if (!contentArea) return;
+    
+    // Update CSS variables
+    contentArea.style.setProperty('--main-font-size', appState.fontSize + 'px');
+    contentArea.style.setProperty('--main-font-color', appState.fontColor);
+    
+    // Update UI controls to match state
+    if (fontSizeInput && updateInput) fontSizeInput.value = appState.fontSize;
+    if (fontSizeSlider) fontSizeSlider.value = appState.fontSize;
+    
+    // Update active color circle
+    document.querySelectorAll('.color-circle').forEach(c => c.classList.remove('active'));
+    
+    // Try to find matching preset
+    let matched = false;
+    colorCircles.forEach(c => {
+        // Simple case-insensitive hex check
+        if (c.dataset.color && c.dataset.color.toLowerCase() === appState.fontColor.toLowerCase()) {
+            c.classList.add('active');
+            matched = true;
+        }
+    });
+    
+    // If not matched, activate custom trigger
+    if (!matched && customColorTrigger) {
+        customColorTrigger.classList.add('active');
+        customColorTrigger.style.backgroundColor = appState.fontColor;
+        customColorTrigger.style.borderStyle = 'solid';
+        if (customColorPicker) customColorPicker.value = appState.fontColor;
+    } else if (customColorTrigger) {
+        // Reset custom trigger style if using preset
+        customColorTrigger.classList.remove('active');
+        customColorTrigger.style.backgroundColor = 'transparent';
+        customColorTrigger.style.borderStyle = 'dashed';
     }
 }
 
