@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fishing Book · v2.0 · 阅读器</title>
+    <link rel="stylesheet" href="./fb-ui.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="window" role="application" aria-label="Fishing Book v2.0 · 阅读器">
+        <div class="window-bar">
+          <div class="brand">
+            <div class="logo" aria-hidden="true"></div>
+            <a class="btn btn-ghost" id="btnBack" href="./bookshelf.html" aria-label="返回书架">←</a>
+            <div class="title" id="bookTitle">阅读器</div>
+            <div class="subtitle" id="bookSub">v2.0</div>
+          </div>
+          <div class="bar-actions" aria-label="阅读器工具栏">
+            <span class="pill" id="progressPill" title="阅读进度">
+              进度 <span class="kbd" id="progressText">—</span>
+              <span class="save-ind" id="saveInd" aria-hidden="true" title="已自动保存"></span>
+            </span>
+            <button class="btn" type="button" id="btnTop" title="回到顶部">回到顶部</button>
+            <button class="btn" type="button" id="btnPin" aria-pressed="false" title="置顶">置顶</button>
+            <button class="btn" type="button" id="btnAppearance" aria-haspopup="dialog" aria-label="外观设置">外观</button>
+            <button class="btn btn-ghost" type="button" id="btnMore" aria-haspopup="dialog" aria-label="更多">⋯</button>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="state is-active" data-state="loading" style="padding:14px;">
+            <div class="skeleton" style="height:14px; width:52%;"></div>
+            <div style="height:10px;"></div>
+            <div class="skeleton" style="height:14px; width:92%;"></div>
+            <div style="height:10px;"></div>
+            <div class="skeleton" style="height:14px; width:86%;"></div>
+          </div>
+
+          <div class="state" data-state="default" style="padding:14px;">
+            <div class="reader-wrap">
+              <div class="reader is-plain" id="reader" aria-label="正文"></div>
+            </div>
+          </div>
+
+          <div class="state" data-state="empty" style="padding:14px;">
+            <div class="empty">
+              <div class="illus" aria-hidden="true"></div>
+              <h2>未选择书本</h2>
+              <p>请从书架打开一本书。</p>
+              <div class="cta">
+                <a class="btn btn-primary" id="btnBackEmpty" href="./bookshelf.html">返回书架</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="state" data-state="error" style="padding:14px;">
+            <div class="banner bad" role="alert">
+              <div class="msg">
+                无法打开书本
+                <div class="sub" id="errDetail">—</div>
+              </div>
+              <a class="btn btn-ghost" id="btnBackErr" href="./bookshelf.html">返回书架</a>
+            </div>
+            <div style="height:12px;"></div>
+            <div class="muted">路径</div>
+            <div class="pill" style="justify-content:space-between;">
+              <span class="faint" id="pathPreview">—</span>
+              <button class="btn btn-ghost" type="button" id="btnCopyPath">复制</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="mAppearance" role="dialog" aria-modal="true" aria-label="外观设置（全局）">
+      <div class="modal">
+        <div class="modal-hd">
+          <div class="modal-title">外观设置（全局）</div>
+          <button class="btn btn-ghost" type="button" data-modal-close="mAppearance" aria-label="关闭">✕</button>
+        </div>
+        <div class="modal-bd">
+          <div class="field">
+            <div class="field-label">
+              <span>透明度</span>
+              <span class="kbd" id="opacityValue">—</span>
+            </div>
+            <input class="range" id="opacityRange" type="range" min="65" max="100" step="1" value="92" />
+            <div class="field-help">仅影响阅读器窗口，设置会保存到本地。</div>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="field">
+            <div class="field-label">
+              <span>主题色</span>
+              <span class="faint">影响强调色与高亮</span>
+            </div>
+            <div class="theme-grid" id="themeGrid"></div>
+          </div>
+        </div>
+        <div class="modal-ft">
+          <button class="btn" type="button" id="btnResetAppearance">恢复默认</button>
+          <button class="btn btn-primary" type="button" data-modal-close="mAppearance">完成</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="mMore" role="dialog" aria-modal="true" aria-label="更多操作">
+      <div class="modal">
+        <div class="modal-hd">
+          <div class="modal-title">更多</div>
+          <button class="btn btn-ghost" type="button" data-modal-close="mMore" aria-label="关闭">✕</button>
+        </div>
+        <div class="modal-bd">
+          <div class="muted" id="morePath">—</div>
+          <div class="sep"></div>
+          <div class="row" style="justify-content:flex-start; gap:10px; flex-wrap:wrap;">
+            <button class="btn" type="button" id="btnRelinkBook">重新定位文件…</button>
+            <button class="btn btn-danger" type="button" id="btnRemoveBookFromLib">从书库移除</button>
+          </div>
+        </div>
+        <div class="modal-ft">
+          <button class="btn" type="button" data-modal-close="mMore">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./fb-ui.js"></script>
+    <script>
+      (async ()=>{
+        await FB.initBase();
+
+        const p = FB.parseParams();
+        const libraryId = p.get("libraryId");
+        const bookId = p.get("bookId");
+        const open = p.get("open");
+
+        const btnBack = FB.qs("#btnBack");
+        const btnBackEmpty = FB.qs("#btnBackEmpty");
+        const btnBackErr = FB.qs("#btnBackErr");
+        const bookTitle = FB.qs("#bookTitle");
+        const bookSub = FB.qs("#bookSub");
+        const reader = FB.qs("#reader");
+        const progressText = FB.qs("#progressText");
+        const progressPill = FB.qs("#progressPill");
+        const saveInd = FB.qs("#saveInd");
+        const pathPreview = FB.qs("#pathPreview");
+        const btnCopyPath = FB.qs("#btnCopyPath");
+        const errDetail = FB.qs("#errDetail");
+        const btnTop = FB.qs("#btnTop");
+        const btnPin = FB.qs("#btnPin");
+        const btnAppearance = FB.qs("#btnAppearance");
+        const btnMore = FB.qs("#btnMore");
+        const morePath = FB.qs("#morePath");
+        const btnRelinkBook = FB.qs("#btnRelinkBook");
+        const btnRemoveBookFromLib = FB.qs("#btnRemoveBookFromLib");
+
+        const opacityRange = FB.qs("#opacityRange");
+        const opacityValue = FB.qs("#opacityValue");
+        const themeGrid = FB.qs("#themeGrid");
+        const btnResetAppearance = FB.qs("#btnResetAppearance");
+
+        let active = null;
+        let saveTimer = null;
+        let lastSaveAt = 0;
+        let saveIndTimer = null;
+
+        function setState(state){
+          FB.qsa("[data-state]").forEach(el=>{
+            el.classList.toggle("is-active", el.getAttribute("data-state") === state);
+          });
+        }
+
+        function flashSaved(){
+          if(!saveInd) return;
+          saveInd.classList.add("is-on");
+          clearTimeout(saveIndTimer);
+          saveIndTimer = setTimeout(()=> saveInd.classList.remove("is-on"), 900);
+        }
+
+        function ratioFromScroll(el){
+          const max = el.scrollHeight - el.clientHeight;
+          if(max <= 0) return 0;
+          return Math.max(0, Math.min(1, el.scrollTop / max));
+        }
+
+        function scrollToRatio(el, ratio){
+          const max = el.scrollHeight - el.clientHeight;
+          el.scrollTop = Math.round(max * Math.max(0, Math.min(1, ratio)));
+        }
+
+        function updateProgressPill(r){
+          const pct = Math.round(r * 100);
+          progressText.textContent = `${pct}%`;
+          progressPill.title = `阅读进度 ${pct}%`;
+        }
+
+        async function restoreProgress(){
+          if(!active || !reader) return;
+          let r = 0;
+          try{
+            const pr = await window.electronAPI.progressGet(libraryId, active.bookId);
+            r = pr?.success ? (pr.progress?.scrollRatio ?? 0) : 0;
+          }catch(_e){ r = 0; }
+          requestAnimationFrame(()=>{
+            scrollToRatio(reader, r);
+            updateProgressPill(ratioFromScroll(reader));
+            if(r > 0) flashSaved();
+          });
+        }
+
+        function scheduleSave(){
+          if(!active || !reader) return;
+          if(saveTimer) return;
+          saveTimer = setTimeout(()=>{
+            saveTimer = null;
+            const now = Date.now();
+            if(now - lastSaveAt < 2000) return;
+            lastSaveAt = now;
+            const r = ratioFromScroll(reader);
+            try{ window.electronAPI.progressSave(libraryId, active.bookId, r); }catch(_e){}
+            flashSaved();
+          }, 320);
+        }
+
+        async function loadBook(){
+          if(!libraryId || !bookId){
+            setState("empty");
+            return;
+          }
+          btnBack.href = `./bookshelf.html?libraryId=${encodeURIComponent(libraryId)}`;
+          btnBackEmpty.href = btnBack.href;
+          btnBackErr.href = btnBack.href;
+
+          setState("loading");
+          const res = await window.electronAPI.readerOpenBook(libraryId, bookId);
+          if(!res || !res.success){
+            setState("error");
+            errDetail.textContent = res?.error === "file-missing" ? "文件缺失：路径无效" : (res?.error || "未知错误");
+            pathPreview.textContent = "—";
+            morePath.textContent = "—";
+            return;
+          }
+          active = { libraryId, bookId, filePath: res.filePath || "", fileName: res.fileName || "", encoding: res.encoding || "" };
+
+          bookTitle.textContent = res.fileName || "未命名";
+          bookSub.textContent = `${active.encoding || ""}${active.encoding ? " · " : ""}${active.filePath || ""}`;
+          pathPreview.textContent = active.filePath || "—";
+          morePath.textContent = active.filePath || "—";
+          reader.textContent = res.content || "";
+          setState("default");
+          updateProgressPill(0);
+          await restoreProgress();
+        }
+
+        async function renderAppearance(){
+          const s = FB.settings.get();
+          const ap = s.appearance || {};
+          opacityRange.value = String(Math.round((ap.globalOpacity || 0.92) * 100));
+          opacityValue.textContent = `${opacityRange.value}%`;
+          themeGrid.innerHTML = "";
+          Object.entries(FB.settings.THEMES).forEach(([key, t])=>{
+            const opt = document.createElement("label");
+            opt.className = "theme-opt";
+            const checked = (ap.theme === key);
+            opt.innerHTML = `
+              <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                <input type="radio" name="theme" value="${key}" ${checked ? "checked" : ""} />
+                <div style="min-width:0;">
+                  <div style="font-weight:650; color: var(--text); font-size:13px;">${t.label}</div>
+                  <div class="faint" style="font-size:12px;">${key}</div>
+                </div>
+              </div>
+              <span class="swatch ${key}" aria-hidden="true"></span>
+            `;
+            themeGrid.appendChild(opt);
+          });
+        }
+
+        btnTop.addEventListener("click", ()=>{
+          if(!reader) return;
+          reader.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        btnPin.addEventListener("click", ()=>{
+          const next = btnPin.getAttribute("aria-pressed") !== "true";
+          btnPin.setAttribute("aria-pressed", next ? "true" : "false");
+          try{ window.electronAPI.toggleAlwaysOnTop(next); }catch(_e){}
+        });
+
+        btnAppearance.addEventListener("click", async ()=>{
+          await renderAppearance();
+          FB.openModal("mAppearance");
+        });
+
+        btnMore.addEventListener("click", ()=> FB.openModal("mMore"));
+
+        btnCopyPath.addEventListener("click", ()=>{
+          try{
+            const t = pathPreview.textContent || "";
+            if(t && t !== "—") navigator.clipboard?.writeText(t);
+          }catch(_e){}
+        });
+
+        opacityRange.addEventListener("input", async ()=>{
+          const v = Number(opacityRange.value) / 100;
+          opacityValue.textContent = `${opacityRange.value}%`;
+          await FB.settings.setAppearance({ globalOpacity: v });
+          try{ window.electronAPI.setOpacity(v); }catch(_e){}
+        });
+
+        themeGrid.addEventListener("change", async (e)=>{
+          const input = e.target.closest("input[type=radio][name=theme]");
+          if(!input) return;
+          await FB.settings.setAppearance({ theme: input.value });
+        });
+
+        btnResetAppearance.addEventListener("click", async ()=>{
+          await FB.settings.resetAppearance();
+          await renderAppearance();
+        });
+
+        btnRelinkBook.addEventListener("click", async ()=>{
+          if(!libraryId || !bookId) return;
+          await window.electronAPI.bookRelinkFile(libraryId, bookId);
+          FB.closeModal("mMore");
+          await loadBook();
+        });
+
+        btnRemoveBookFromLib.addEventListener("click", async ()=>{
+          if(!libraryId || !bookId) return;
+          await window.electronAPI.bookRemove(libraryId, bookId);
+          location.href = `./bookshelf.html?libraryId=${encodeURIComponent(libraryId)}`;
+        });
+
+        reader.addEventListener("scroll", ()=>{
+          updateProgressPill(ratioFromScroll(reader));
+          scheduleSave();
+        }, { passive: true });
+
+        await loadBook();
+        if(open === "appearance"){
+          await renderAppearance();
+          FB.openModal("mAppearance");
+        }
+      })();
+    </script>
+  </body>
+</html>

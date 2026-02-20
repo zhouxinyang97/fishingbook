@@ -1,287 +1,261 @@
+
 const appWindow = document.getElementById('app-window');
 const contentArea = document.getElementById('content-area');
+const tabTitle = document.getElementById('tab-title');
+const libraryBtn = document.getElementById('library-btn');
 const opacitySlider = document.getElementById('opacity-slider');
-const fileInput = document.getElementById('file-input');
-const loadFileBtn = document.getElementById('load-file-btn');
-const fileNameDisplay = document.getElementById('file-name-display');
-const resizeOverlay = document.getElementById('resize-overlay');
-
-let isPinned = false;
-const pinBtn = document.querySelector('.pin-btn');
-
-let lastLoadedText = null;
-let lastLoadedFileName = null;
-let lastLoadedFilePath = null;
-let lastScrollRatio = 0;
 
 // Window Controls
-pinBtn.addEventListener('click', () => {
-    isPinned = !isPinned;
-    window.electronAPI.toggleAlwaysOnTop(isPinned);
-    pinBtn.style.backgroundColor = isPinned ? '#007acc' : '#a0a0a0';
-});
+const pinBtn = document.getElementById('pin-btn');
+const minBtn = document.getElementById('min-btn');
+const maxBtn = document.getElementById('max-btn');
+const closeBtn = document.getElementById('close-btn');
 
-// Global keyboard shortcuts for scrolling
-document.addEventListener('keydown', (e) => {
-    if (document.activeElement === opacitySlider) return;
+// State Management
+let appState = {
+    view: 'reader', // 'reader', 'library'
+    books: [],
+    currentBookId: null,
+    isMaximized: false,
+    isPinned: false
+};
 
-    const scrollAmount = 50;
-    if (e.key === 'ArrowUp') {
-        contentArea.scrollTop -= scrollAmount;
-    } else if (e.key === 'ArrowDown') {
-        contentArea.scrollTop += scrollAmount;
-    } else if (e.key === 'PageUp') {
-        contentArea.scrollTop -= contentArea.clientHeight;
-    } else if (e.key === 'PageDown') {
-        contentArea.scrollTop += contentArea.clientHeight;
+// Default Content
+const defaultBookHtml = `
+    <span class="comment">// Application Startup Sequence initiated...</span><br>
+    <span class="log-time">[SYSTEM]</span> <span class="log-info">INFO</span>  <span class="log-text">Welcome to Fishing Book v2.1</span><br>
+    <span class="comment">// --------------------------------------------------</span><br>
+    <span class="comment">// Please add a book from the Library.</span><br>
+    <span class="comment">// --------------------------------------------------</span><br>
+`;
+
+// Initialization
+async function init() {
+    // Load from disk via IPC
+    try {
+        const res = await window.api.data.load();
+        if (res.success && res.data) {
+            appState.books = res.data.books || [];
+            appState.currentBookId = res.data.currentBookId || null;
+            appState.isPinned = res.data.isPinned || false;
+        }
+    } catch (e) {
+        console.error('Failed to load data', e);
     }
-});
 
-let saveScrollRafId = null;
-function getScrollRatio() {
-    const maxScroll = Math.max(contentArea.scrollHeight - contentArea.clientHeight, 1);
-    return contentArea.scrollTop / maxScroll;
+    // Sync Pin State
+    if (appState.isPinned) {
+        window.api.windowControl.setAlwaysOnTop(true);
+        pinBtn.classList.add('active');
+        updatePinIcon(true);
+    }
+
+    // Restore Window Size if saved (Optional)
+    // if (res.data.windowBounds) window.api.windowControl.resize(res.data.windowBounds);
+
+    // If no books, add default placeholder or go to library
+    if (appState.books.length === 0) {
+        appState.view = 'library';
+    } else {
+        // Verify if files still exist? Maybe later.
+        appState.view = 'reader';
+    }
+
+    render();
 }
 
-function scheduleSaveSession() {
-    if (!lastLoadedFilePath) return;
-    if (saveScrollRafId != null) return;
-    saveScrollRafId = requestAnimationFrame(() => {
-        saveScrollRafId = null;
-        window.electronAPI.saveSession({ filePath: lastLoadedFilePath, scrollRatio: getScrollRatio() });
+async function saveData() {
+    // Persist to disk
+    await window.api.data.save({
+        books: appState.books,
+        currentBookId: appState.currentBookId,
+        isPinned: appState.isPinned
     });
 }
 
-contentArea.addEventListener('scroll', () => {
-    if (isResizing) return;
-    scheduleSaveSession();
-});
-
-document.querySelector('.minimize-btn').addEventListener('click', () => {
-    window.electronAPI.minimize();
-});
-
-const maximizeBtn = document.querySelector('.maximize-btn');
-maximizeBtn.addEventListener('click', () => {
-    window.electronAPI.maximize();
-});
-
-// Listen for window state changes to update the maximize button
-window.electronAPI.onWindowStateChange((state) => {
-    if (state === 'maximized') {
-        maximizeBtn.title = 'Restore';
-        // Simulating "restore" icon or state by darkening
-        maximizeBtn.style.opacity = '0.6';
+function render() {
+    renderHeader();
+    if (appState.view === 'library') {
+        renderLibrary();
     } else {
-        maximizeBtn.title = 'Maximize';
-        maximizeBtn.style.opacity = '1';
+        renderReader();
     }
-});
+}
 
-const resizers = document.querySelectorAll('.resizer');
-let isResizing = false;
-let currentResizer = null;
-let startX, startY, startW, startH, startTop, startLeft;
-let pendingBounds = null;
-let resizeTicking = false;
-let lastSentBounds = null;
-let lastResizeSendAt = 0;
-let didClearDuringResize = false;
+function renderHeader() {
+    // Update Title
+    if (appState.view === 'library') {
+        tabTitle.innerHTML = '<span class="keyword">View</span>: Library';
+        libraryBtn.classList.add('active');
+        libraryBtn.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+            </svg>
+            <span>Reader</span>`;
+    } else {
+        // Reader Mode
+        const currentBook = appState.books.find(b => b.id === appState.currentBookId);
+        const bookName = currentBook ? currentBook.name : 'No File';
+        tabTitle.innerHTML = `<span class="log-time">#</span> ${bookName}`;
+        libraryBtn.classList.remove('active');
+        libraryBtn.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+            <span>Library</span>`;
+    }
+}
 
-resizers.forEach(resizer => {
-    resizer.addEventListener('mousedown', (e) => {
-        isResizing = true;
-        currentResizer = resizer;
-        startX = e.screenX;
-        startY = e.screenY;
+function renderLibrary() {
+    let html = '<div class="book-list">';
+    
+    if (appState.books.length === 0) {
+        html += '<div class="empty-state">// No books found.<br>// Please add a file to start reading.</div>';
+    } else {
+        // Header row
+        html += '<div style="padding: 5px 12px; color: #555; font-size: 12px; display: flex; font-family: monospace;">' +
+                '<span style="width: 40px; text-align: right; margin-right: 15px;">ID</span>' +
+                '<span style="flex:1">FILENAME</span>' +
+                '<span style="width: 80px;">PROGRESS</span>' +
+                '</div>';
         
-        // Initial state capture
-        startW = window.outerWidth;
-        startH = window.outerHeight;
-        startTop = window.screenY;
-        startLeft = window.screenX;
-
-        lastScrollRatio = getScrollRatio();
-        didClearDuringResize = false;
-        contentArea.style.display = 'none';
-        contentArea.textContent = '';
-        didClearDuringResize = true;
-        if (resizeOverlay) resizeOverlay.style.display = 'flex';
-
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-    });
-});
-
-function boundsEqual(a, b) {
-    if (!a || !b) return false;
-    return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
-}
-
-function scheduleResizeTick() {
-    if (resizeTicking) return;
-    resizeTicking = true;
-    const tick = () => {
-        if (!isResizing) {
-            resizeTicking = false;
-            return;
-        }
-        if (pendingBounds) {
-            const now = performance.now();
-            if (now - lastResizeSendAt >= 33 && !boundsEqual(pendingBounds, lastSentBounds)) {
-                window.electronAPI.resizeWindow(pendingBounds);
-                lastSentBounds = pendingBounds;
-                lastResizeSendAt = now;
-            }
-        }
-        requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-}
-
-function onMouseMove(e) {
-    if (!isResizing) return;
-
-    const dx = e.screenX - startX;
-    const dy = e.screenY - startY;
-    
-    let newW = startW;
-    let newH = startH;
-    let newX = startLeft;
-    let newY = startTop;
-
-    const classList = currentResizer.classList;
-    
-    // Logic for 8 directions
-    if (classList.contains('right')) {
-        newW = startW + dx;
-    } 
-    else if (classList.contains('left')) {
-        newW = startW - dx;
-        newX = startLeft + dx;
-    } 
-    else if (classList.contains('bottom')) {
-        newH = startH + dy;
-    } 
-    else if (classList.contains('top')) {
-        newH = startH - dy;
-        newY = startTop + dy;
-    } 
-    else if (classList.contains('bottom-right')) {
-        newW = startW + dx;
-        newH = startH + dy;
-    } 
-    else if (classList.contains('bottom-left')) {
-        newW = startW - dx;
-        newH = startH + dy;
-        newX = startLeft + dx;
-    } 
-    else if (classList.contains('top-right')) {
-        newW = startW + dx;
-        newH = startH - dy;
-        newY = startTop + dy;
-    } 
-    else if (classList.contains('top-left')) {
-        newW = startW - dx;
-        newH = startH - dy;
-        newX = startLeft + dx;
-        newY = startTop + dy;
+        appState.books.forEach(book => {
+            const isCurrent = book.id === appState.currentBookId;
+            const activeStyle = isCurrent ? 'background-color: rgba(55, 55, 60, 0.5);' : '';
+            const indicator = isCurrent ? '<span style="color: #007acc; margin-right: 5px;">*</span>' : '';
+            
+            html += `
+            <div class="book-item" style="${activeStyle}" onclick="openBook('${book.id}')">
+                <span class="book-id">${book.id.slice(-4)}</span>
+                <span class="book-name">${indicator}${book.name}</span>
+                <span class="book-progress">${book.progress || '0%'}</span>
+                <span class="book-delete" onclick="deleteBook('${book.id}', event)">[del]</span>
+            </div>`;
+        });
     }
 
-    // Min size constraints
-    if (newW < 200) newW = 200;
-    if (newH < 150) newH = 150;
-    
-    pendingBounds = { x: newX, y: newY, width: newW, height: newH };
-    scheduleResizeTick();
+    // Add Book Button
+    html += `
+        <div class="add-book-row" onclick="triggerAddBook()">
+            <span class="keyword">+</span> Add New Book (Upload .txt/.log/.md)
+        </div>
+    </div>`;
+
+    contentArea.innerHTML = html;
 }
 
-function onMouseUp() {
-    isResizing = false;
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-    if (pendingBounds && !boundsEqual(pendingBounds, lastSentBounds)) window.electronAPI.resizeWindow(pendingBounds);
-    pendingBounds = null;
-    if (resizeOverlay) resizeOverlay.style.display = 'none';
-    contentArea.style.display = '';
-    if (didClearDuringResize && lastLoadedText != null && lastLoadedFileName != null) {
-        renderText(lastLoadedText, lastLoadedFileName, { restoreScrollRatio: lastScrollRatio });
+function renderReader() {
+    const book = appState.books.find(b => b.id === appState.currentBookId);
+    if (!book) {
+        contentArea.innerHTML = defaultBookHtml;
+        return;
     }
+    
+    // Detach scroll listener temporarily to prevent saving while restoring
+    contentArea.onscroll = null;
+    
+    // If content is missing (loaded from JSON but not read from file yet)
+    if (!book.content && book.filePath) {
+        loadBookContent(book);
+        contentArea.innerHTML = '<span class="log-info">Loading...</span>';
+        return;
+    }
+    contentArea.innerHTML = book.content || defaultBookHtml;
+    
+    // Restore scroll position
+    if (book.progress) {
+        // progress is stored as percentage string "12%"
+        const percentage = parseFloat(book.progress) / 100;
+        if (!isNaN(percentage)) {
+             // We need to wait for DOM update
+             requestAnimationFrame(() => {
+                 contentArea.scrollTop = (contentArea.scrollHeight - contentArea.clientHeight) * percentage;
+             });
+        }
+    }
+
+    // Attach scroll listener for this book
+    // Remove old listener first to avoid duplicates/leaks if re-rendering?
+    // contentArea is a single element, so setting onscroll overwrites previous handler.
+    contentArea.onscroll = handleScroll;
 }
 
-document.querySelector('.close-btn').addEventListener('click', () => {
-    window.electronAPI.close();
-});
-
-// Transparency Control
-opacitySlider.addEventListener('input', (e) => {
-    const val = e.target.value / 100;
-    // Update background rgba alpha channel
-    appWindow.style.backgroundColor = `rgba(30, 30, 30, ${val})`;
-});
-
-// Trigger file input when "Load File" button is clicked
-loadFileBtn.addEventListener('click', () => {
-    window.electronAPI.openFile().then((result) => {
-        if (!result || !result.success) {
-            return;
-        }
-        fileNameDisplay.textContent = `${result.fileName}${result.encoding ? ' · ' + result.encoding : ''}`;
-        lastLoadedText = result.content;
-        lastLoadedFileName = result.fileName;
-        lastLoadedFilePath = result.filePath;
-        renderText(lastLoadedText, lastLoadedFileName);
-        window.electronAPI.saveSession({ filePath: lastLoadedFilePath, scrollRatio: 0 });
-    });
-});
-
-// File Load Simulation
-fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    fileNameDisplay.textContent = file.name;
-    
-    // In Electron, file objects from input have a 'path' property
-    if (file.path) {
-        try {
-            const result = await window.electronAPI.loadFile(file.path);
-            if (result.success) {
-                console.log(`Loaded file with encoding: ${result.encoding}`);
-                lastLoadedText = result.content;
-                lastLoadedFileName = file.name;
-                lastLoadedFilePath = file.path;
-                renderText(lastLoadedText, lastLoadedFileName);
-                window.electronAPI.saveSession({ filePath: lastLoadedFilePath, scrollRatio: 0 });
-            } else {
-                console.error('Failed to load file:', result.error);
-                contentArea.innerHTML = `<span class="log-info">ERROR</span> Failed to load file: ${result.error}`;
-            }
-        } catch (err) {
-            console.error('Error loading file:', err);
-        }
-    } else {
-        // Fallback for browser testing (without node integration)
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const text = event.target.result;
-            lastLoadedText = text;
-            lastLoadedFileName = file.name;
-            lastLoadedFilePath = null;
-            renderText(lastLoadedText, lastLoadedFileName);
+// Debounce helper
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
         };
-        reader.readAsText(file);
-    }
-});
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
 
-function renderText(text, filename, options) {
-    // Convert plain text to "Log" format for the MVP
-    const lines = text.split('\n');
-    let html = '<span class="comment">// Loaded: ' + filename + '</span><br>';
-    html += '<span class="comment">// -----------------------------------</span><br><br>';
+// Handle Scroll with Debounce
+const handleScroll = debounce(() => {
+    if (appState.view !== 'reader' || !appState.currentBookId) return;
     
-    // Simple mock time generator to make it look sequential
-    let baseTime = new Date();
+    const scrollTop = contentArea.scrollTop;
+    const scrollHeight = contentArea.scrollHeight;
+    const clientHeight = contentArea.clientHeight;
+    
+    // Avoid division by zero
+    const maxScroll = scrollHeight - clientHeight;
+    let percentage = 0;
+    if (maxScroll > 0) {
+        percentage = scrollTop / maxScroll;
+    }
+    
+    // Format as percentage string
+    // let percentage = 0;
+    if (maxScroll > 0) {
+        percentage = scrollTop / maxScroll;
+    }
+    const progressStr = (percentage * 100).toFixed(1) + '%';
+    
+    // Update state
+    const book = appState.books.find(b => b.id === appState.currentBookId);
+    if (book) {
+        book.progress = progressStr;
+        // Don't save full list every scroll, just update in memory?
+        // But user asked for auto-save.
+        // We are debounced, so it's okay.
+        saveData(); 
+    }
+}, 500);
+
+async function loadBookContent(book) {
+    try {
+        const res = await window.api.file.read(book.filePath);
+        if (res.success) {
+            book.content = formatTextToLog(res.content, book.name);
+            saveData(); // Optional: don't save full content to JSON to keep it small? 
+            // Better: Don't save content to JSON. Only save path.
+            // On load, re-read file. 
+            // For now, to keep it simple, we re-render.
+            renderReader();
+        } else {
+            book.content = `<span class="error">// Error loading file: ${res.error}</span>`;
+            renderReader();
+        }
+    } catch (e) {
+        book.content = `<span class="error">// Error: ${e.message}</span>`;
+        renderReader();
+    }
+}
+
+function formatTextToLog(text, fileName) {
+    const lines = text.split('\n');
+    let html = '';
+    
+    // Add header
+    html += `<span class="comment">// Loaded: ${fileName}</span><br>`;
+    html += `<span class="comment">// -----------------------------------</span><br><br>`;
     
     lines.forEach((line, index) => {
         if (line.trim() === '') {
@@ -289,31 +263,19 @@ function renderText(text, filename, options) {
             return;
         }
         
-        // Increment time slightly for realism
-        baseTime.setSeconds(baseTime.getSeconds() + 1);
-        const timeStr = baseTime.toLocaleTimeString('en-US', { hour12: false });
-        
-        // Randomize log level occasionally
-        const levels = ['INFO', 'DEBUG', 'WARN', 'DATA'];
-        const level = levels[index % 4];
-        let levelClass = 'log-info';
-        if (level === 'DEBUG') levelClass = 'log-info'; // or gray
-        if (level === 'WARN') levelClass = 'comment'; // yellowish in some themes, using comment color for now
-        
-        // Use consistent colors for levels
-        const levelSpan = `<span class="${level === 'WARN' ? 'comment' : 'log-info'}">${level.padEnd(5)}</span>`;
-
-        html += `<span class="log-time">[${timeStr}]</span> ${levelSpan} <span class="log-text">${escapeHtml(line)}</span><br>`;
+        // Simple heuristic for log styling
+        if (line.trim().startsWith('//')) {
+             html += `<span class="comment">${escapeHtml(line)}</span><br>`;
+        } else {
+             const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+             html += `<span class="log-time">[${time}]</span> <span class="log-info">DATA</span> <span class="log-text">${escapeHtml(line)}</span><br>`;
+        }
     });
-    
-    contentArea.innerHTML = html;
-    if (options && typeof options.restoreScrollRatio === 'number') {
-        const maxScroll = Math.max(contentArea.scrollHeight - contentArea.clientHeight, 0);
-        contentArea.scrollTop = Math.round(maxScroll * options.restoreScrollRatio);
-    }
+    return html;
 }
 
 function escapeHtml(text) {
+    if (!text) return '';
     return text
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -322,11 +284,318 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
-window.electronAPI.getLastSession().then((result) => {
-    if (!result || !result.success) return;
-    lastLoadedText = result.content;
-    lastLoadedFileName = result.fileName;
-    lastLoadedFilePath = result.filePath;
-    fileNameDisplay.textContent = `${result.fileName}${result.encoding ? ' · ' + result.encoding : ''}`;
-    renderText(lastLoadedText, lastLoadedFileName, { restoreScrollRatio: result.scrollRatio || 0 });
+// Global Actions
+window.toggleLibrary = function() {
+    if (appState.view === 'reader') {
+        appState.view = 'library';
+    } else {
+        if (appState.books.length > 0) {
+            appState.view = 'reader';
+        }
+    }
+    render();
+}
+
+window.openBook = function(id) {
+    appState.currentBookId = id;
+    appState.view = 'reader';
+    saveData();
+    render();
+}
+
+window.triggerAddBook = async function() {
+    const res = await window.api.file.openDialog();
+    if (res.canceled || !res.filePaths || res.filePaths.length === 0) return;
+
+    for (const filePath of res.filePaths) {
+        // Read file to get name and initial content
+        const fileRes = await window.api.file.read(filePath);
+        if (fileRes.success) {
+             const newId = String(Date.now()) + Math.floor(Math.random() * 1000);
+             const formattedHtml = formatTextToLog(fileRes.content, fileRes.fileName);
+             
+             const newBook = {
+                id: newId,
+                name: fileRes.fileName,
+                filePath: filePath,
+                content: formattedHtml, // In-memory cache
+                progress: '0%'
+             };
+             
+             // Check duplicates?
+             const exists = appState.books.find(b => b.filePath === filePath);
+             if (!exists) {
+                appState.books.push(newBook);
+                appState.currentBookId = newId;
+             } else {
+                appState.currentBookId = exists.id;
+             }
+        }
+    }
+    appState.view = 'reader';
+    saveData(); // Note: We should probably NOT save 'content' field to disk to avoid huge JSON files
+    // But for MVP, if we don't save content, we need to reload it every time.
+    // Let's clean content before saving.
+    render();
+}
+
+// Override save to exclude content
+const originalSave = saveData;
+saveData = async function() {
+    // Create a lightweight copy for storage
+    const booksToSave = appState.books.map(b => ({
+        id: b.id,
+        name: b.name,
+        filePath: b.filePath,
+        progress: b.progress
+        // content is excluded
+    }));
+    
+    await window.api.data.save({
+        books: booksToSave,
+        currentBookId: appState.currentBookId,
+        isPinned: appState.isPinned
+    });
+}
+
+window.deleteBook = function(id, event) {
+    event.stopPropagation();
+    if (confirm('Delete this book from library?')) {
+        appState.books = appState.books.filter(b => b.id !== id);
+        if (appState.currentBookId === id) {
+            appState.currentBookId = appState.books.length > 0 ? appState.books[0].id : null;
+        }
+        saveData();
+        render();
+    }
+}
+
+// Event Listeners
+if (libraryBtn) libraryBtn.addEventListener('click', toggleLibrary);
+
+if (pinBtn) {
+    pinBtn.addEventListener('click', () => {
+        appState.isPinned = !appState.isPinned;
+        window.api.windowControl.setAlwaysOnTop(appState.isPinned);
+        pinBtn.classList.toggle('active', appState.isPinned);
+        updatePinIcon(appState.isPinned);
+        saveData();
+    });
+}
+
+function updatePinIcon(isPinned) {
+    if (isPinned) {
+        pinBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M9.5 2h-4L4 5v2h2v5l1 1h1l1-1V7h2V5L9.5 2z m-1 5H6.5V5h2v2z" />
+        </svg>`;
+    } else {
+         pinBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+             <path d="M9.5 2h-4L4 5v2h2v5l1 1h1l1-1V7h2V5L9.5 2z m-1 5H6.5V5h2v2z" style="opacity: 0.5"/>
+        </svg>`;
+    }
+}
+
+if (minBtn) minBtn.addEventListener('click', () => window.api.windowControl.minimize());
+
+if (maxBtn) {
+    maxBtn.addEventListener('click', () => {
+        if (appState.isMaximized) {
+            window.api.windowControl.unmaximize();
+        } else {
+            window.api.windowControl.maximize();
+        }
+        // The actual state update will come from IPC event
+    });
+}
+
+// Listen for window state changes from main process
+if (window.api.windowControl.onStateChange) {
+    window.api.windowControl.onStateChange((state) => {
+        appState.isMaximized = (state === 'maximized');
+        updateMaxIcon(appState.isMaximized);
+    });
+}
+
+function updateMaxIcon(isMax) {
+    if (isMax) {
+        maxBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M3 5v9h9V5H3zm8 8H4V6h7v7z"/>
+            <path d="M5 5h1V4h7v7h-1v1h2V3H5v2z"/>
+        </svg>`;
+    } else {
+        maxBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M3 3v10h10V3H3zm9 9H4V4h8v8z"/>
+        </svg>`;
+    }
+}
+
+if (closeBtn) closeBtn.addEventListener('click', () => window.api.windowControl.close());
+
+if (opacitySlider) {
+    opacitySlider.addEventListener('input', (e) => {
+        const val = e.target.value / 100;
+        appWindow.style.backgroundColor = `rgba(30, 30, 30, ${val})`;
+    });
+}
+
+// Resize Logic
+const resizeHandles = document.querySelectorAll('.resize-handle');
+const resizeOverlay = document.getElementById('resize-overlay');
+let isResizing = false;
+let resizeDirection = '';
+let initialMouseX = 0;
+let initialMouseY = 0;
+let initialBounds = null;
+let lastScrollPercentage = 0;
+
+resizeHandles.forEach(handle => {
+    handle.addEventListener('mousedown', async (e) => {
+        // Prevent default to avoid text selection etc
+        e.preventDefault();
+        
+        isResizing = true;
+        resizeDirection = handle.dataset.direction;
+        initialMouseX = e.screenX;
+        initialMouseY = e.screenY;
+        
+        // Get initial window bounds
+        try {
+            initialBounds = await window.api.windowControl.getBounds();
+        } catch (err) {
+            console.error('Failed to get window bounds', err);
+            isResizing = false;
+            return;
+        }
+
+        // Set cursor for body
+        let cursor = 'default';
+        if (resizeDirection === 'top') cursor = 'n-resize';
+        if (resizeDirection === 'bottom') cursor = 's-resize';
+        if (resizeDirection === 'left') cursor = 'w-resize';
+        if (resizeDirection === 'right') cursor = 'e-resize';
+        if (resizeDirection === 'bottom-right') cursor = 'se-resize';
+        if (resizeDirection === 'top-left') cursor = 'nw-resize';
+        if (resizeDirection === 'top-right') cursor = 'ne-resize';
+        if (resizeDirection === 'bottom-left') cursor = 'sw-resize';
+        document.body.style.cursor = cursor;
+        if (resizeOverlay) resizeOverlay.style.cursor = cursor;
+
+        // Calculate scroll percentage before hiding
+        if (contentArea && contentArea.scrollHeight > contentArea.clientHeight) {
+            lastScrollPercentage = contentArea.scrollTop / (contentArea.scrollHeight - contentArea.clientHeight);
+        } else {
+            lastScrollPercentage = 0;
+        }
+
+        // Show overlay and hide content to improve performance
+        if (resizeOverlay) resizeOverlay.classList.remove('hidden');
+        if (contentArea) contentArea.classList.add('hidden');
+    });
 });
+
+document.addEventListener('mousemove', (e) => {
+    if (!isResizing || !initialBounds) return;
+    
+    // Use requestAnimationFrame to throttle IPC calls
+    requestAnimationFrame(() => {
+        const deltaX = e.screenX - initialMouseX;
+        const deltaY = e.screenY - initialMouseY;
+        
+        let newBounds = { ...initialBounds };
+
+        switch (resizeDirection) {
+            case 'bottom-right':
+                newBounds.width = initialBounds.width + deltaX;
+                newBounds.height = initialBounds.height + deltaY;
+                break;
+            case 'right':
+                newBounds.width = initialBounds.width + deltaX;
+                break;
+            case 'bottom':
+                newBounds.height = initialBounds.height + deltaY;
+                break;
+            case 'left':
+                newBounds.x = initialBounds.x + deltaX;
+                newBounds.width = initialBounds.width - deltaX;
+                break;
+            case 'top':
+                newBounds.y = initialBounds.y + deltaY;
+                newBounds.height = initialBounds.height - deltaY;
+                break;
+            case 'top-left':
+                newBounds.x = initialBounds.x + deltaX;
+                newBounds.y = initialBounds.y + deltaY;
+                newBounds.width = initialBounds.width - deltaX;
+                newBounds.height = initialBounds.height - deltaY;
+                break;
+            case 'top-right':
+                newBounds.y = initialBounds.y + deltaY;
+                newBounds.width = initialBounds.width + deltaX;
+                newBounds.height = initialBounds.height - deltaY;
+                break;
+            case 'bottom-left':
+                newBounds.x = initialBounds.x + deltaX;
+                newBounds.width = initialBounds.width - deltaX;
+                newBounds.height = initialBounds.height + deltaY;
+                break;
+        }
+        
+        // Minimum size constraint
+        const MIN_WIDTH = 400;
+        const MIN_HEIGHT = 300;
+
+        if (newBounds.width < MIN_WIDTH) {
+            // Adjust x if resizing from left
+            if (resizeDirection === 'left' || resizeDirection === 'top-left' || resizeDirection === 'bottom-left') {
+                newBounds.x = initialBounds.x + (initialBounds.width - MIN_WIDTH);
+            }
+            newBounds.width = MIN_WIDTH;
+        }
+        
+        if (newBounds.height < MIN_HEIGHT) {
+            // Adjust y if resizing from top
+            if (resizeDirection === 'top' || resizeDirection === 'top-left' || resizeDirection === 'top-right') {
+                newBounds.y = initialBounds.y + (initialBounds.height - MIN_HEIGHT);
+            }
+            newBounds.height = MIN_HEIGHT;
+        }
+
+        // Ensure integers
+        newBounds.x = Math.round(newBounds.x);
+        newBounds.y = Math.round(newBounds.y);
+        newBounds.width = Math.round(newBounds.width);
+        newBounds.height = Math.round(newBounds.height);
+
+        window.api.windowControl.resize(newBounds);
+    });
+});
+
+document.addEventListener('mouseup', () => {
+    if (isResizing) {
+        isResizing = false;
+        initialBounds = null;
+        document.body.style.cursor = 'default';
+        if (resizeOverlay) resizeOverlay.style.cursor = 'default';
+        
+        // Hide overlay and restore content
+        if (resizeOverlay) resizeOverlay.classList.add('hidden');
+        if (contentArea) {
+            contentArea.classList.remove('hidden');
+            
+            // Restore scroll position based on percentage
+            // Use setTimeout/rAF to ensure layout is recalculated
+            requestAnimationFrame(() => {
+                if (contentArea.scrollHeight > contentArea.clientHeight) {
+                    contentArea.scrollTop = lastScrollPercentage * (contentArea.scrollHeight - contentArea.clientHeight);
+                }
+            });
+        }
+    }
+});
+
+// Start
+document.addEventListener('DOMContentLoaded', init);
