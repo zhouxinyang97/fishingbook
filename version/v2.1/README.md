@@ -23,18 +23,12 @@
 
 ## 安装与运行
 
-### 直接使用
+### 直接使用（Windows）
 
-前往 GitHub Releases 下载对应平台的二进制文件（命名示例）：
+前往 GitHub Releases 下载 Windows 二进制文件（命名示例）：
 
-- Windows
-  - 安装包：`fishingbook.2.1.0-win-x64-nsis.exe`
-  - 绿色版：`fishingbook.2.1.0-win-x64-portable.exe`
-- Linux
-  - `fishingbook.2.1.0-linux-x64.AppImage`
-  - `fishingbook.2.1.0-linux-x64.deb`
-- macOS
-  - `fishingbook.2.1.0-mac-x64.dmg` / `fishingbook.2.1.0-mac-arm64.dmg`（按构建情况）
+- 安装包：`fishingbook.2.1.0-win-x64-nsis.exe`
+- 绿色版：`fishingbook.2.1.0-win-x64-portable.exe`
 
 ### 源码运行
 
@@ -45,15 +39,10 @@ npm ci
 npm start
 ```
 
-### 打包构建
+### 打包构建（Windows）
 
 ```bash
-# Windows（本机）
 npm run dist:win
-
-# Linux/macOS（在对应系统执行）
-npm run dist:linux
-npm run dist:mac
 ```
 
 打包产物默认输出至 `dist/`，命名规则：`fishingbook.${version}-${os}-${arch}[-nsis|-portable].${ext}`。
@@ -70,7 +59,7 @@ npm run dist:mac
 
 ## 已知限制
 
-- macOS 与 Linux 包需在对应平台构建；若需 CI/CD 自动构建三端，请在 Issue 中提出或直接提交 PR。
+- 当前发布仅提供 Windows 安装包与绿色版。如需其他平台支持（Linux/macOS），请在 Issue 中提出或提交 PR。
 
 ## 许可
 
@@ -79,4 +68,3 @@ ISC License。
 ---
 
 感谢使用 FishingBook，欢迎反馈问题与建议。祝阅读愉快！
-
