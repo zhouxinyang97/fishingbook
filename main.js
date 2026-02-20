@@ -104,6 +104,19 @@ ipcMain.on('window-control', (event, action, payload) => {
         mainWindow.maximize();
       }
       break;
+    case 'unmaximize':
+      // Attempt to restore from native unmaximize first
+      mainWindow.unmaximize();
+      // Then, if we have a recorded previousBounds, apply them after a short delay
+      if (previousBounds) {
+        setTimeout(() => {
+          // Only apply if the window is indeed not maximized anymore
+          if (mainWindow && !mainWindow.isMaximized()) {
+            mainWindow.setBounds(previousBounds);
+          }
+        }, 50);
+      }
+      break;
     case 'close':
       mainWindow.close();
       break;
@@ -134,6 +147,14 @@ function setupWindowEvents() {
     });
     mainWindow.on('unmaximize', () => {
         mainWindow.webContents.send('window-state-changed', 'normal');
+        // Ensure restore to exact previous non-maximized bounds for frameless windows
+        if (previousBounds) {
+            setTimeout(() => {
+                if (mainWindow && !mainWindow.isMaximized()) {
+                    mainWindow.setBounds(previousBounds);
+                }
+            }, 50);
+        }
     });
 
     // Track bounds for manual restore

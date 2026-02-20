@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('api', {
   windowControl: {
     minimize: () => ipcRenderer.send('window-control', 'minimize'),
     maximize: () => ipcRenderer.send('window-control', 'maximize'),
+    unmaximize: () => ipcRenderer.send('window-control', 'unmaximize'),
     close: () => ipcRenderer.send('window-control', 'close'),
     setAlwaysOnTop: (flag) => ipcRenderer.send('window-control', 'set-always-on-top', flag),
     setOpacity: (val) => ipcRenderer.send('window-control', 'set-opacity', val),
