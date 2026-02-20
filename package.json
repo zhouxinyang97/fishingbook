@@ -1,6 +1,6 @@
 {
   "name": "fishing_book",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Fishing Book v2.1",
   "main": "main.js",
   "scripts": {
