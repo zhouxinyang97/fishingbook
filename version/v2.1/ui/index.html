@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fishing Book</title>
-    <!-- Tailwind for utilities (optional, can be local) -->
+    <title>Fishing Book - v2.1 Prototype</title>
+    <!-- Tailwind for utilities -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Instructions -->
     <div class="fixed top-4 left-4 text-gray-500 text-xs select-none pointer-events-none" style="z-index: 0;">
-        <p>Fishing Book v2.1</p>
+        <p>Fishing Book v2.1 (MVP UI)</p>
         <p>Hover bottom-right for controls.</p>
     </div>
 
@@ -64,22 +64,11 @@
                 <label class="text-xs text-gray-400">Opacity</label>
                 <input type="range" id="opacity-slider" min="10" max="100" value="95">
             </div>
+            <!-- Hidden file input for Add Book logic -->
+            <input type="file" id="file-input" class="hidden-file-input" accept=".txt,.log,.md">
         </div>
-        
-        <!-- Resize Handles -->
-        <div class="resize-handle resize-top" data-direction="top"></div>
-        <div class="resize-handle resize-bottom" data-direction="bottom"></div>
-        <div class="resize-handle resize-left" data-direction="left"></div>
-        <div class="resize-handle resize-right" data-direction="right"></div>
-        <div class="resize-handle resize-corner-tl" data-direction="top-left"></div>
-        <div class="resize-handle resize-corner-tr" data-direction="top-right"></div>
-        <div class="resize-handle resize-corner-bl" data-direction="bottom-left"></div>
-        <div class="resize-handle resize-corner-br" data-direction="bottom-right"></div>
     </div>
-    
-    <!-- Resize Overlay -->
-    <div id="resize-overlay" class="hidden"></div>
 
-    <script src="renderer.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
