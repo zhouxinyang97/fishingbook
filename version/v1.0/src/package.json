@@ -1,15 +1,12 @@
 {
   "name": "fishing_book",
-  "version": "2.1.1",
-  "description": "Fishing Book v2.1",
+  "version": "2.0.0-alpha.0",
+  "description": "Fishing Book (v2.0 dev)",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist:win": "electron-builder --win",
-    "dist:linux": "electron-builder --linux",
-    "dist:mac": "electron-builder --mac",
-    "dist:all": "electron-builder -mwl",
+    "dist": "electron-builder --win",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -18,7 +15,6 @@
   "build": {
     "appId": "com.fishingbook.app",
     "productName": "FishingBook",
-    "artifactName": "fishingbook.${version}-${os}-${arch}.${ext}",
     "asar": true,
     "directories": {
       "output": "dist"
@@ -47,29 +43,12 @@
         "portable"
       ]
     },
-    "portable": {
-      "artifactName": "fishingbook.${version}-${os}-${arch}-portable.${ext}"
-    },
-    "mac": {
-      "target": [
-        "dmg",
-        "zip"
-      ]
-    },
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "Utility"
-    },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "artifactName": "fishingbook.${version}-${os}-${arch}-nsis.${ext}"
+      "createStartMenuShortcut": true
     }
   },
   "dependencies": {
