@@ -66,12 +66,9 @@
             <div class="setting-item">
                 <div class="setting-label">
                     <span>Font Size</span>
-                    <div class="flex items-center gap-1">
-                        <input type="number" id="font-size-input" class="setting-input" min="12" max="64" value="14">
-                        <span class="text-xs text-gray-500">px</span>
-                    </div>
+                    <span id="font-size-val" class="setting-value">14px</span>
                 </div>
-                <input type="range" id="font-size-slider" min="12" max="64" value="14" step="1">
+                <input type="range" id="font-size-slider" min="12" max="32" value="14" step="1">
             </div>
             
             <div class="setting-item">
@@ -98,7 +95,13 @@
 
         <!-- Content -->
         <div id="content-area">
-            <!-- JS Injected Content -->
+            <!-- Mock Content for UI Preview -->
+            <div class="log-info">[INFO] Welcome to Fishing Book v2.1.1</div>
+            <div class="log-text">This is a preview of the new font settings feature.</div>
+            <div class="comment">// You can adjust font size and color using the settings button above.</div>
+            <div class="log-text">
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+            </div>
         </div>
 
         <!-- Controls (Hover) -->
@@ -123,6 +126,52 @@
     <!-- Resize Overlay -->
     <div id="resize-overlay" class="hidden"></div>
 
-    <script src="renderer.js"></script>
+    <!-- No logic script included in UI preview, just layout -->
+    <!-- <script src="renderer.js"></script> -->
+    <script>
+        // Simple mock logic for UI preview
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsPanel = document.getElementById('settings-panel');
+        const fontSizeSlider = document.getElementById('font-size-slider');
+        const fontSizeVal = document.getElementById('font-size-val');
+        const contentArea = document.getElementById('content-area');
+        const colorCircles = document.querySelectorAll('.color-circle:not(.custom-color-trigger)');
+        const customColorPicker = document.getElementById('custom-color-picker');
+        const customColorTrigger = document.querySelector('.custom-color-trigger');
+
+        settingsBtn.addEventListener('click', () => {
+            settingsPanel.classList.toggle('hidden');
+            settingsBtn.classList.toggle('active');
+        });
+
+        fontSizeSlider.addEventListener('input', (e) => {
+            const val = e.target.value;
+            fontSizeVal.textContent = val + 'px';
+            contentArea.style.setProperty('--main-font-size', val + 'px');
+        });
+
+        colorCircles.forEach(circle => {
+            circle.addEventListener('click', (e) => {
+                const color = e.target.dataset.color;
+                contentArea.style.setProperty('--main-font-color', color);
+                
+                // Active state
+                document.querySelectorAll('.color-circle').forEach(c => c.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+
+        customColorPicker.addEventListener('input', (e) => {
+            const color = e.target.value;
+            contentArea.style.setProperty('--main-font-color', color);
+            
+            // Active state
+            document.querySelectorAll('.color-circle').forEach(c => c.classList.remove('active'));
+            customColorTrigger.classList.add('active');
+            // Update trigger background to show selected color
+            customColorTrigger.style.backgroundColor = color;
+            customColorTrigger.style.borderStyle = 'solid';
+        });
+    </script>
 </body>
 </html>
