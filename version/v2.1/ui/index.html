@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fishing Book - v2.1 Prototype</title>
+    <!-- Tailwind for utilities -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Instructions -->
+    <div class="fixed top-4 left-4 text-gray-500 text-xs select-none pointer-events-none" style="z-index: 0;">
+        <p>Fishing Book v2.1 (MVP UI)</p>
+        <p>Hover bottom-right for controls.</p>
+    </div>
+
+    <!-- App Window -->
+    <div id="app-window">
+        <!-- Header -->
+        <div class="window-header">
+            <div class="header-left">
+                <div class="tab-active" id="tab-title">
+                    <span class="log-time">#</span> Loading...
+                </div>
+            </div>
+            <div class="header-right">
+                 <button id="library-btn" class="library-btn">
+                    Library
+                 </button>
+                 <div class="window-controls">
+                    <button id="pin-btn" class="control-btn" title="Always On Top">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M9.5 2h-4L4 5v2h2v5l1 1h1l1-1V7h2V5L9.5 2z m-1 5H6.5V5h2v2z" />
+                        </svg>
+                    </button>
+                    <button id="min-btn" class="control-btn" title="Minimize">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M14 8v1H2V8h12z"/>
+                        </svg>
+                    </button>
+                    <button id="max-btn" class="control-btn" title="Maximize">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M3 3v10h10V3H3zm9 9H4V4h8v8z"/>
+                        </svg>
+                    </button>
+                    <button id="close-btn" class="control-btn close-btn" title="Close">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M7.116 8l-4.558 4.558.884.884L8 8.884l4.558 4.558.884-.884L8.884 8l4.558-4.558-.884-.884L8 7.116 3.442 2.558l-.884.884L7.116 8z"/>
+                        </svg>
+                    </button>
+                 </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div id="content-area">
+            <!-- JS Injected Content -->
+        </div>
+
+        <!-- Controls (Hover) -->
+        <div class="controls-area">
+            <div class="flex flex-col gap-1">
+                <label class="text-xs text-gray-400">Opacity</label>
+                <input type="range" id="opacity-slider" min="10" max="100" value="95">
+            </div>
+            <!-- Hidden file input for Add Book logic -->
+            <input type="file" id="file-input" class="hidden-file-input" accept=".txt,.log,.md">
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
